@@ -1,0 +1,53 @@
+# ---------- .NET ----------
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+*.userprefs
+*.rsuser
+.vs/
+TestResults/
+*.trx
+*.coverage
+coverage*.json
+coverage*.xml
+publish/
+*.pubxml.user
+artifacts/
+
+# ---------- Angular / Node ----------
+node_modules/
+dist/
+.angular/
+coverage/
+npm-debug.log*
+yarn-error.log*
+.npm/
+
+# ---------- IDEs ----------
+.idea/
+*.iml
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+
+# ---------- Secrets & local config ----------
+# Secrets go to `dotnet user-secrets`, never to appsettings files in the repo.
+.env
+.env.*
+*.local.json
+appsettings.*.local.json
+
+# ---------- Local storage (uploaded videos etc.) ----------
+storage/
+uploads/
+
+# ---------- OS / tools ----------
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.drawio.bkp
+.$*
