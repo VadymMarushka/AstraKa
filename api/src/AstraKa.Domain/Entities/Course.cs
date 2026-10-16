@@ -15,18 +15,18 @@ public class Course
     /// <summary>FK to <see cref="Starshepherd"/> ("Leads").</summary>
     public Guid AuthorId { get; private set; }
 
-    public string Name { get; set; } = string.Empty;
+    public string Name { get; private set; } = string.Empty;
 
-    public string Description { get; set; } = string.Empty;
+    public string Description { get; private set; } = string.Empty;
 
     /// <summary>What this course promises, beyond the platform-wide mission of Alignment.</summary>
-    public string Promise { get; set; } = string.Empty;
+    public string Promise { get; private set; } = string.Empty;
 
-    public decimal Price { get; set; }
+    public decimal Price { get; private set; }
 
     public CourseStatus Status { get; private set; } = CourseStatus.Draft;
 
-    public Starshepherd Author { get; set; } = null!;
+    public Starshepherd Author { get; private set; } = null!;
 
     public ICollection<CourseDay> CourseDays { get; private set; } = new List<CourseDay>();
 

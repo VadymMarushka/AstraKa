@@ -69,9 +69,21 @@ Clean Architecture with four projects. Dependencies point inward only:
 - Validation runs in **one** MediatR pipeline behavior; handlers never call validators manually.
 - Handlers use `IAppDbContext` directly. **No generic repository, no Unit of Work wrapper,
   no specification pattern** — `DbContext` already is both.
-- Errors: throw small domain/application exceptions (`NotFoundException`, `ConflictException`,
-  `ForbiddenException`) and map them to ProblemDetails in a single `IExceptionHandler`.
-  Never leak exception details in Production.
+- Errors: handlers throw only `NotFoundException` (404) or `DomainException` (409) — both single
+  classes, no subtype hierarchy. Everything else (validation failures, `DbUpdateConcurrencyException`,
+  a uniqueness/FK violation that reaches SQL Server directly) is matched by type in the one
+  `IExceptionHandler` without a dedicated exception type. 403 is `ControllerBase.Forbid()`, not an
+  exception. Never leak exception details in Production.
+- Request body vs route values: bind the MediatR command straight from the body when nothing else
+  needs merging in (e.g. `OnboardAsWandererCommand`, `CreateExerciseCommand`). When the route
+  supplies a value the body must not duplicate (an `id`), use a body-only `XxxRequest` record with
+  no `Id`, and have the controller build the full command from the route value + the request
+  (e.g. `UpdateExerciseRequest` → `UpdateExerciseCommand`).
+- Resource-based authorization stays in Api: the controller loads the resource first (a query that
+  also gives the 404), calls `IAuthorizationService.AuthorizeAsync` with the resource's author id
+  against a named policy from `Api/Auth/Policies.cs`, returns `Forbid()` on failure, only then sends
+  the mutating command. `Application` never references `Microsoft.AspNetCore.Authorization` or any
+  other ASP.NET Core type.
 - Prefer clear, explainable code over clever code: the author has to defend every line at a
   lab defense. **Ask before adding a new library, layer or pattern.**
 - Add short comments on the main structural pieces (lab reports require commented code).

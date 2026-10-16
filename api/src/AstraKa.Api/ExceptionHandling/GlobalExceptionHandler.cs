@@ -11,10 +11,10 @@ namespace AstraKa.Api.ExceptionHandling;
 /// <summary>
 /// The one place exceptions become HTTP responses, per CLAUDE.md: validation -> 400 with field
 /// errors, <see cref="NotFoundException"/> -> 404, <see cref="DomainException"/> -> 409,
-/// <see cref="DbUpdateConcurrencyException"/> -> 409, a uniqueness violation that reaches SQL
-/// Server directly -> 409, everything else -> 500 with no details outside Development. Every
-/// expected (non-500) case logs Information with just the message; only the 500 path logs Error
-/// with the full exception.
+/// <see cref="DbUpdateConcurrencyException"/> -> 409, a uniqueness or FK-restrict violation that
+/// reaches SQL Server directly -> 409, everything else -> 500 with no details outside Development.
+/// Every expected (non-500) case logs Information with just the message; only the 500 path logs
+/// Error with the full exception.
 /// </summary>
 internal sealed class GlobalExceptionHandler(IHostEnvironment environment, ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
@@ -28,6 +28,8 @@ internal sealed class GlobalExceptionHandler(IHostEnvironment environment, ILogg
             DbUpdateConcurrencyException => BuildProblem(StatusCodes.Status409Conflict, "Conflict", "The resource was modified by someone else. Reload and try again."),
             DbUpdateException dbUpdateException when IsUniqueConstraintViolation(dbUpdateException) =>
                 BuildProblem(StatusCodes.Status409Conflict, "Conflict", "A record with these values already exists."),
+            DbUpdateException dbUpdateException when IsForeignKeyViolation(dbUpdateException) =>
+                BuildProblem(StatusCodes.Status409Conflict, "Conflict", "This record is still referenced by other data and cannot be deleted."),
             _ => BuildProblem(StatusCodes.Status500InternalServerError, "An unexpected error occurred.", environment.IsDevelopment() ? exception.ToString() : null),
         };
 
@@ -58,6 +60,17 @@ internal sealed class GlobalExceptionHandler(IHostEnvironment environment, ILogg
     {
         return exception.InnerException is SqlException sqlException
             && (sqlException.Number == SqlErrorNumbers.UniqueConstraintViolation || sqlException.Number == SqlErrorNumbers.UniqueIndexViolation);
+    }
+
+    /// <summary>
+    /// A Restrict FK violation reaching SQL Server directly - the safety net for the race between
+    /// an explicit "is this still in use" check (e.g. <c>DeleteExerciseCommandHandler</c>) and the
+    /// actual delete.
+    /// </summary>
+    private static bool IsForeignKeyViolation(DbUpdateException exception)
+    {
+        return exception.InnerException is SqlException sqlException
+            && sqlException.Number == SqlErrorNumbers.ForeignKeyConstraintViolation;
     }
 
     private static ValidationProblemDetails BuildValidationProblem(ValidationException exception)

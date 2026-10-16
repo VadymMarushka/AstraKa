@@ -1,4 +1,4 @@
-namespace AstraKa.Tests.Ado;
+namespace AstraKa.Tests.Common;
 
 /// <summary>
 /// Serializes every test class in this collection so they share one <see cref="DatabaseFixture"/>

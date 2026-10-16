@@ -9,9 +9,9 @@ public class Starshepherd
     /// <summary>PK and FK to <see cref="User"/>.</summary>
     public Guid UserId { get; private set; }
 
-    public string Title { get; set; } = string.Empty;
+    public string Title { get; private set; } = string.Empty;
 
-    public User User { get; set; } = null!;
+    public User User { get; private set; } = null!;
 
     public ICollection<Course> Courses { get; private set; } = new List<Course>();
 

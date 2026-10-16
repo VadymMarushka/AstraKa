@@ -1,3 +1,4 @@
+using AstraKa.Tests.Common;
 using AstraKa.Application.Reports;
 using AstraKa.Domain.Enums;
 using Microsoft.EntityFrameworkCore;

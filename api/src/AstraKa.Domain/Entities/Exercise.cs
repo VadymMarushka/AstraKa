@@ -14,18 +14,18 @@ public class Exercise
     /// <summary>FK to <see cref="Starshepherd"/>. Null = system exercise.</summary>
     public Guid? AuthorId { get; private set; }
 
-    public string Name { get; set; } = string.Empty;
+    public string Name { get; private set; } = string.Empty;
 
-    public string Description { get; set; } = string.Empty;
+    public string Description { get; private set; } = string.Empty;
 
     /// <summary>How to perform the exercise, separate from <see cref="Description"/>'s lore line.</summary>
-    public string Instructions { get; set; } = string.Empty;
+    public string Instructions { get; private set; } = string.Empty;
 
-    public ExerciseUnit Unit { get; set; }
+    public ExerciseUnit Unit { get; private set; }
 
-    public string? VideoUrl { get; set; }
+    public string? VideoUrl { get; private set; }
 
-    public Starshepherd? Author { get; set; }
+    public Starshepherd? Author { get; private set; }
 
     public ICollection<DayExercise> DayExercises { get; private set; } = new List<DayExercise>();
 
@@ -44,6 +44,21 @@ public class Exercise
 
         Id = id;
         AuthorId = authorId;
+        Name = name;
+        Description = description;
+        Instructions = instructions;
+        Unit = unit;
+        VideoUrl = videoUrl;
+    }
+
+    /// <summary>Full update of the mutable fields - same non-empty-name guard as the constructor.</summary>
+    public void Update(string name, string description, string instructions, ExerciseUnit unit, string? videoUrl)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Exercise name cannot be empty.", nameof(name));
+        }
+
         Name = name;
         Description = description;
         Instructions = instructions;

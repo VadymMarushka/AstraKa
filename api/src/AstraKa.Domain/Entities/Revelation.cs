@@ -20,13 +20,13 @@ public class Revelation
     /// <summary>FK to <see cref="CourseDay"/> ("Targets") - the day this note is meant for.</summary>
     public Guid CourseDayId { get; private set; }
 
-    public string Message { get; set; } = string.Empty;
+    public string Message { get; private set; } = string.Empty;
 
     public DateTime CreatedAt { get; private set; }
 
-    public Enrollment Enrollment { get; set; } = null!;
+    public Enrollment Enrollment { get; private set; } = null!;
 
-    public CourseDay CourseDay { get; set; } = null!;
+    public CourseDay CourseDay { get; private set; } = null!;
 
     public ICollection<DayExercise> ExtraExercises { get; private set; } = new List<DayExercise>();
 

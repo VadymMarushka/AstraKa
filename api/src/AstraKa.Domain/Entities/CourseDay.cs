@@ -14,14 +14,14 @@ public class CourseDay
     /// <summary>1-based. Unique within the course.</summary>
     public int DayNumber { get; private set; }
 
-    public string Title { get; set; } = string.Empty;
+    public string Title { get; private set; } = string.Empty;
 
-    public string? Description { get; set; }
+    public string? Description { get; private set; }
 
     /// <summary>Video meeting with the Starshepherd, if any.</summary>
-    public string? MeetLink { get; set; }
+    public string? MeetLink { get; private set; }
 
-    public Course Course { get; set; } = null!;
+    public Course Course { get; private set; } = null!;
 
     public ICollection<DayExercise> DayExercises { get; private set; } = new List<DayExercise>();
 

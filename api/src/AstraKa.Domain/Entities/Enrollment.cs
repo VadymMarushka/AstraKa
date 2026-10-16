@@ -20,9 +20,9 @@ public class Enrollment
     /// <summary>Snapshot of <see cref="Course.Price"/> at enrollment time - a separate fact, not a duplicate.</summary>
     public decimal PaidPrice { get; private set; }
 
-    public Wanderer Wanderer { get; set; } = null!;
+    public Wanderer Wanderer { get; private set; } = null!;
 
-    public Cohort Cohort { get; set; } = null!;
+    public Cohort Cohort { get; private set; } = null!;
 
     public ICollection<Revelation> Revelations { get; private set; } = new List<Revelation>();
 

@@ -16,15 +16,15 @@ public class User
 
     public string Email { get; private set; } = string.Empty;
 
-    public string Name { get; set; } = string.Empty;
+    public string Name { get; private set; } = string.Empty;
 
     public UserRole Role { get; private set; }
 
     /// <summary>Set when <see cref="Role"/> is <see cref="UserRole.Wanderer"/>.</summary>
-    public Wanderer? Wanderer { get; set; }
+    public Wanderer? Wanderer { get; private set; }
 
     /// <summary>Set when <see cref="Role"/> is <see cref="UserRole.Starshepherd"/>.</summary>
-    public Starshepherd? Starshepherd { get; set; }
+    public Starshepherd? Starshepherd { get; private set; }
 
     private User()
     {

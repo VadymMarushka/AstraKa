@@ -1,5 +1,5 @@
 using AstraKa.Infrastructure.Persistence;
-using AstraKa.Tests.Ado;
+using AstraKa.Tests.Common;
 using Microsoft.EntityFrameworkCore;
 
 namespace AstraKa.Tests.Concurrency;

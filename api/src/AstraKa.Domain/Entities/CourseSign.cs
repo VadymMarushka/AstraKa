@@ -10,9 +10,9 @@ public class CourseSign
 
     public int ZodiacSignId { get; private set; }
 
-    public Course Course { get; set; } = null!;
+    public Course Course { get; private set; } = null!;
 
-    public ZodiacSign ZodiacSign { get; set; } = null!;
+    public ZodiacSign ZodiacSign { get; private set; } = null!;
 
     private CourseSign()
     {

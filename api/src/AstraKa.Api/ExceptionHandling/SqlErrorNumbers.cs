@@ -1,9 +1,10 @@
 namespace AstraKa.Api.ExceptionHandling;
 
 /// <summary>
-/// Named SQL Server error numbers this layer reacts to. Not the same concern as
-/// Infrastructure/Ado's own <c>SqlErrorNumbers</c> (that one's about Restrict FK violations on
-/// delete) - this one is about uniqueness violations reaching SQL Server directly.
+/// Named SQL Server error numbers this layer reacts to - uniqueness and FK violations that reach
+/// SQL Server directly. <see cref="ForeignKeyConstraintViolation"/> mirrors
+/// Infrastructure/Ado's own constant of the same value; kept separate since they're different
+/// layers' concerns (that one reacts to it in ADO.NET deletes, this one in EF Core saves).
 /// </summary>
 internal static class SqlErrorNumbers
 {
@@ -12,4 +13,7 @@ internal static class SqlErrorNumbers
 
     /// <summary>"Cannot insert duplicate key row ... with unique index".</summary>
     public const int UniqueIndexViolation = 2601;
+
+    /// <summary>"The DELETE/UPDATE statement conflicted with the REFERENCE constraint".</summary>
+    public const int ForeignKeyConstraintViolation = 547;
 }

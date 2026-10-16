@@ -1,8 +1,6 @@
 using System.Net.Http.Json;
 using AstraKa.Application.ZodiacSigns;
-using AstraKa.Tests.Ado;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
+using AstraKa.Tests.Common;
 
 namespace AstraKa.Tests.Endpoints;
 
@@ -16,10 +14,7 @@ public class ZodiacSignsEndpointTests(DatabaseFixture fixture)
     [Fact]
     public async Task Get_zodiac_signs_returns_all_twelve_seeded_signs()
     {
-        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
-            builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
-                new Dictionary<string, string?> { ["ConnectionStrings:Default"] = fixture.ConnectionString })));
-        using var client = factory.CreateClient();
+        using var client = fixture.CreateClientAs();
 
         var response = await client.GetAsync("/api/v1/zodiac-signs");
         response.EnsureSuccessStatusCode();

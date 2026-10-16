@@ -1,25 +1,37 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using AstraKa.Application.CourseProgram;
 using AstraKa.Application.Reports;
 using AstraKa.Domain.Entities;
 using AstraKa.Infrastructure;
 using AstraKa.Infrastructure.Persistence;
+using AstraKa.Tests.Auth;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace AstraKa.Tests.Ado;
+namespace AstraKa.Tests.Common;
 
 /// <summary>
-/// Spins up a dedicated <c>AstraKa_Tests</c> LocalDB database, dropped and recreated (migrated +
-/// seeded) at the start of every test run, so ADO.NET CRUD tests never accumulate stale rows across
-/// runs. Shared by every test class in the "Database" collection (see <see cref="DatabaseCollection"/>).
+/// Shared by every test class in the "Database" collection (see <see cref="DatabaseCollection"/>):
+/// a dedicated <c>AstraKa_Tests</c> LocalDB database, dropped and recreated (migrated + seeded) at
+/// the start of every run, plus one <see cref="WebApplicationFactory{Program}"/> against it for
+/// endpoint tests.
 /// </summary>
 public sealed class DatabaseFixture : IAsyncLifetime
 {
     private const string TestConnectionString =
         "Server=(localdb)\\MSSQLLocalDB;Database=AstraKa_Tests;Trusted_Connection=True;TrustServerCertificate=True";
 
+    /// <summary>Matches Program.cs's own enum-as-string <c>AddJsonOptions</c> - every response read needs it too.</summary>
+    public static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true, Converters = { new JsonStringEnumConverter() } };
+
     private ServiceProvider? _provider;
     private IServiceScope? _scope;
+    private WebApplicationFactory<Program>? _apiFactory;
 
     /// <summary>For tests that need their own independent <see cref="AppDbContext"/> instances (e.g. concurrency tests).</summary>
     public string ConnectionString => TestConnectionString;
@@ -52,15 +64,47 @@ public sealed class DatabaseFixture : IAsyncLifetime
         DayExercises = _provider.GetRequiredService<IDayExerciseRepository>();
         CourseProgram = _provider.GetRequiredService<ICourseProgramRepository>();
         Reports = _provider.GetRequiredService<IReportRepository>();
+
+        _apiFactory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
+                new Dictionary<string, string?> { ["ConnectionStrings:Default"] = TestConnectionString }));
+
+            // Swap Auth0 JWT validation for the test scheme, which reads X-Test-Sub/X-Test-Email
+            // headers instead of a real bearer token.
+            builder.ConfigureTestServices(apiServices =>
+            {
+                apiServices.AddAuthentication(TestAuthHandler.SchemeName)
+                    .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
+            });
+        });
     }
 
     public async Task DisposeAsync()
     {
+        _apiFactory?.Dispose();
         _scope?.Dispose();
         if (_provider is not null)
         {
             await _provider.DisposeAsync();
         }
+    }
+
+    /// <summary>An HttpClient against the test Api, authenticated as <paramref name="sub"/> when given (via the test auth scheme).</summary>
+    public HttpClient CreateClientAs(string? sub = null, string? email = null)
+    {
+        var client = _apiFactory!.CreateClient();
+        if (sub is not null)
+        {
+            client.DefaultRequestHeaders.Add("X-Test-Sub", sub);
+        }
+
+        if (email is not null)
+        {
+            client.DefaultRequestHeaders.Add("X-Test-Email", email);
+        }
+
+        return client;
     }
 
     /// <summary>A minimal Course for CRUD tests to attach CourseDays/DayExercises to, isolated from seeded data.</summary>

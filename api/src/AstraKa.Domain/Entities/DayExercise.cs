@@ -18,18 +18,18 @@ public class DayExercise
     /// <summary>FK to <see cref="Revelation"/> ("Adds"). Null = base program.</summary>
     public Guid? RevelationId { get; private set; }
 
-    public int OrderNumber { get; set; }
+    public int OrderNumber { get; private set; }
 
-    public int Sets { get; set; }
+    public int Sets { get; private set; }
 
     /// <summary>Per set, in the exercise's <c>Unit</c> (reps / seconds / breaths).</summary>
-    public int Amount { get; set; }
+    public int Amount { get; private set; }
 
-    public CourseDay CourseDay { get; set; } = null!;
+    public CourseDay CourseDay { get; private set; } = null!;
 
-    public Exercise Exercise { get; set; } = null!;
+    public Exercise Exercise { get; private set; } = null!;
 
-    public Revelation? Revelation { get; set; }
+    public Revelation? Revelation { get; private set; }
 
     public bool IsBaseProgram => RevelationId is null;
 

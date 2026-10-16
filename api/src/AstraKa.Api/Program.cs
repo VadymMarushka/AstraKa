@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using AstraKa.Api.Auth;
 using AstraKa.Api.ExceptionHandling;
 using AstraKa.Application;
@@ -11,8 +12,10 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Controllers stay thin: they only forward requests to MediatR handlers.
-builder.Services.AddControllers();
+// Controllers stay thin: they only forward requests to MediatR handlers. Enums go over the wire
+// as their names ("Seconds"), not their numeric values.
+builder.Services.AddControllers()
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 // OpenAPI document; Scalar is the UI on top of it below.
 builder.Services.AddOpenApi();
@@ -32,10 +35,10 @@ builder.Services
     });
 
 builder.Services.AddAuthorizationBuilder()
-    .AddPolicy("Wanderer", policy => policy.RequireClaim(AstraKaClaimTypes.Role, nameof(UserRole.Wanderer)))
-    .AddPolicy("Starshepherd", policy => policy.RequireClaim(AstraKaClaimTypes.Role, nameof(UserRole.Starshepherd)))
-    .AddPolicy("Oracle", policy => policy.RequireClaim(AstraKaClaimTypes.Role, nameof(UserRole.Oracle)))
-    .AddPolicy("AuthorOrOracle", policy => policy.AddRequirements(new AuthorOrOracleRequirement()));
+    .AddPolicy(Policies.Wanderer, policy => policy.RequireClaim(AstraKaClaimTypes.Role, nameof(UserRole.Wanderer)))
+    .AddPolicy(Policies.Starshepherd, policy => policy.RequireClaim(AstraKaClaimTypes.Role, nameof(UserRole.Starshepherd)))
+    .AddPolicy(Policies.Oracle, policy => policy.RequireClaim(AstraKaClaimTypes.Role, nameof(UserRole.Oracle)))
+    .AddPolicy(Policies.AuthorOrOracle, policy => policy.AddRequirements(new AuthorOrOracleRequirement()));
 
 builder.Services.AddSingleton<IAuthorizationHandler, AuthorOrOracleAuthorizationHandler>();
 builder.Services.AddHttpContextAccessor();

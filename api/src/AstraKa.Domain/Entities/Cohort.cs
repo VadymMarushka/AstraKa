@@ -25,7 +25,7 @@ public class Cohort
     /// <summary>Concurrency token, configured by Infrastructure as a SQL Server rowversion column.</summary>
     public byte[]? RowVersion { get; private set; }
 
-    public Course Course { get; set; } = null!;
+    public Course Course { get; private set; } = null!;
 
     public ICollection<Enrollment> Enrollments { get; private set; } = new List<Enrollment>();
 

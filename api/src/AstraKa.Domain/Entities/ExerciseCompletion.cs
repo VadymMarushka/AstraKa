@@ -17,9 +17,9 @@ public class ExerciseCompletion
 
     public DateTime CompletedAt { get; private set; }
 
-    public DailyReport DailyReport { get; set; } = null!;
+    public DailyReport DailyReport { get; private set; } = null!;
 
-    public DayExercise DayExercise { get; set; } = null!;
+    public DayExercise DayExercise { get; private set; } = null!;
 
     private ExerciseCompletion()
     {

@@ -2,13 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using AstraKa.Application.Me;
 using AstraKa.Domain.Enums;
-using AstraKa.Tests.Ado;
-using AstraKa.Tests.Auth;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+using AstraKa.Tests.Common;
 
 namespace AstraKa.Tests.Endpoints;
 
@@ -20,44 +14,10 @@ namespace AstraKa.Tests.Endpoints;
 [Collection("Database")]
 public class MeEndpointTests(DatabaseFixture fixture)
 {
-    private WebApplicationFactory<Program> CreateFactory()
-    {
-        return new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
-                new Dictionary<string, string?> { ["ConnectionStrings:Default"] = fixture.ConnectionString }));
-
-            // Swap Auth0 JWT validation for the test scheme, which reads X-Test-Sub/X-Test-Email
-            // headers instead of a real bearer token.
-            builder.ConfigureTestServices(services =>
-            {
-                services.AddAuthentication(TestAuthHandler.SchemeName)
-                    .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
-            });
-        });
-    }
-
-    private static HttpClient CreateClient(WebApplicationFactory<Program> factory, string? sub = null, string? email = null)
-    {
-        var client = factory.CreateClient();
-        if (sub is not null)
-        {
-            client.DefaultRequestHeaders.Add("X-Test-Sub", sub);
-        }
-
-        if (email is not null)
-        {
-            client.DefaultRequestHeaders.Add("X-Test-Email", email);
-        }
-
-        return client;
-    }
-
     [Fact]
     public async Task Get_me_without_a_token_returns_401()
     {
-        using var factory = CreateFactory();
-        using var client = CreateClient(factory);
+        using var client = fixture.CreateClientAs();
 
         var response = await client.GetAsync("/api/v1/me");
 
@@ -67,8 +27,7 @@ public class MeEndpointTests(DatabaseFixture fixture)
     [Fact]
     public async Task Get_me_for_a_never_onboarded_sub_returns_404()
     {
-        using var factory = CreateFactory();
-        using var client = CreateClient(factory, $"test|{Guid.NewGuid()}", $"{Guid.NewGuid()}@example.com");
+        using var client = fixture.CreateClientAs($"test|{Guid.NewGuid()}", $"{Guid.NewGuid()}@example.com");
 
         var response = await client.GetAsync("/api/v1/me");
 
@@ -78,14 +37,13 @@ public class MeEndpointTests(DatabaseFixture fixture)
     [Fact]
     public async Task Onboarding_as_wanderer_then_get_me_returns_the_profile()
     {
-        using var factory = CreateFactory();
-        using var client = CreateClient(factory, $"test|{Guid.NewGuid()}", $"{Guid.NewGuid()}@example.com");
+        using var client = fixture.CreateClientAs($"test|{Guid.NewGuid()}", $"{Guid.NewGuid()}@example.com");
 
         var postResponse = await client.PostAsJsonAsync("/api/v1/me/wanderer", new OnboardAsWandererCommand("Test Wanderer", 5));
         Assert.Equal(HttpStatusCode.Created, postResponse.StatusCode);
 
         var getResponse = await client.GetAsync("/api/v1/me");
-        var me = await getResponse.Content.ReadFromJsonAsync<MeDto>();
+        var me = await getResponse.Content.ReadFromJsonAsync<MeDto>(DatabaseFixture.JsonOptions);
 
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
         Assert.Equal(UserRole.Wanderer, me!.Role);
@@ -95,8 +53,7 @@ public class MeEndpointTests(DatabaseFixture fixture)
     [Fact]
     public async Task Onboarding_twice_for_the_same_account_returns_409()
     {
-        using var factory = CreateFactory();
-        using var client = CreateClient(factory, $"test|{Guid.NewGuid()}", $"{Guid.NewGuid()}@example.com");
+        using var client = fixture.CreateClientAs($"test|{Guid.NewGuid()}", $"{Guid.NewGuid()}@example.com");
 
         await client.PostAsJsonAsync("/api/v1/me/wanderer", new OnboardAsWandererCommand("First Time", 3));
         var secondResponse = await client.PostAsJsonAsync("/api/v1/me/wanderer", new OnboardAsWandererCommand("Second Time", 3));
@@ -107,14 +64,13 @@ public class MeEndpointTests(DatabaseFixture fixture)
     [Fact]
     public async Task Onboarding_as_starshepherd_then_get_me_returns_the_profile()
     {
-        using var factory = CreateFactory();
-        using var client = CreateClient(factory, $"test|{Guid.NewGuid()}", $"{Guid.NewGuid()}@example.com");
+        using var client = fixture.CreateClientAs($"test|{Guid.NewGuid()}", $"{Guid.NewGuid()}@example.com");
 
         var postResponse = await client.PostAsJsonAsync("/api/v1/me/starshepherd", new OnboardAsStarshepherdCommand("Test Shepherd", "Keeper of Tests"));
         Assert.Equal(HttpStatusCode.Created, postResponse.StatusCode);
 
         var getResponse = await client.GetAsync("/api/v1/me");
-        var me = await getResponse.Content.ReadFromJsonAsync<MeDto>();
+        var me = await getResponse.Content.ReadFromJsonAsync<MeDto>(DatabaseFixture.JsonOptions);
 
         Assert.Equal(UserRole.Starshepherd, me!.Role);
         Assert.Equal("Keeper of Tests", me.Title);
@@ -123,14 +79,13 @@ public class MeEndpointTests(DatabaseFixture fixture)
     [Fact]
     public async Task Onboarding_two_different_accounts_with_the_same_email_returns_409_from_the_unique_index()
     {
-        using var factory = CreateFactory();
         var sharedEmail = $"{Guid.NewGuid()}@example.com";
 
-        using var firstClient = CreateClient(factory, $"test|{Guid.NewGuid()}", sharedEmail);
+        using var firstClient = fixture.CreateClientAs($"test|{Guid.NewGuid()}", sharedEmail);
         var firstResponse = await firstClient.PostAsJsonAsync("/api/v1/me/wanderer", new OnboardAsWandererCommand("First Account", 1));
         Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
 
-        using var secondClient = CreateClient(factory, $"test|{Guid.NewGuid()}", sharedEmail);
+        using var secondClient = fixture.CreateClientAs($"test|{Guid.NewGuid()}", sharedEmail);
         var secondResponse = await secondClient.PostAsJsonAsync("/api/v1/me/wanderer", new OnboardAsWandererCommand("Second Account", 2));
 
         Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);

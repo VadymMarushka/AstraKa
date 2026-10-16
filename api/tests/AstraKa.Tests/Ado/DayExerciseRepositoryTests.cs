@@ -1,3 +1,4 @@
+using AstraKa.Tests.Common;
 using AstraKa.Application.CourseProgram;
 using Microsoft.EntityFrameworkCore;
 

@@ -21,7 +21,7 @@ public class DailyReport
     /// <summary>1-10: 1 = Chaos, middle = Imbalance, 10 = Harmony.</summary>
     public byte HarmonyLevel { get; private set; }
 
-    public Enrollment Enrollment { get; set; } = null!;
+    public Enrollment Enrollment { get; private set; } = null!;
 
     public ICollection<ExerciseCompletion> Completions { get; private set; } = new List<ExerciseCompletion>();
 
