@@ -243,10 +243,33 @@ property (`User.Role: UserRole`, …) with no change to how application code rea
 
 See `CLAUDE.md` → "ADO.NET vs EF Core boundary". Rule: one operation = one technology.
 
+## Authentication & authorization
+
+Auth0 is the OIDC provider; the API only validates JWT bearer tokens
+(`Authentication:Authority`, `Authentication:Audience` in appsettings - not secrets). Sign-up/sign-in
+happens on Auth0's Universal Login; this API never sees passwords.
+
+Access tokens don't carry `email` by default, so a Post Login Action on the Auth0 tenant adds it as
+the custom claim `https://astraka.app/email`; onboarding reads `User.Email` from that claim.
+
+Roles and profiles live in this database, not in Auth0: the token's `sub` claim maps to
+`User.ExternalId`. `IClaimsTransformation` looks that up once per request and, if found, adds the
+user's internal `Id` and `Role` as claims so the rest of the pipeline never hits the database again.
+A signed-in user with no matching `User` row yet is "authenticated but not onboarded" -
+`GET /api/v1/me` returns 404, which is how clients know to show the onboarding form.
+
+The role is decided by *which* endpoint onboards the account, not chosen by the user: the web app
+calls `POST /api/v1/me/wanderer`, the desktop app calls `POST /api/v1/me/starshepherd`. One account
+= one role - onboarding again, or into the other role, is a 409. Oracle is seed-only, never created
+through the API.
+
+Policies: `Wanderer`/`Starshepherd`/`Oracle` (claim-based) and `AuthorOrOracle` (resource-based - the
+resource is the entity's `AuthorId`; the author or any Oracle passes). Integration tests swap in a
+test authentication scheme instead of hitting Auth0.
+
 ## Open / deferred
 
 - Is a seat freed when a Wanderer leaves before the cohort starts? (default: no)
 - Final name for the exercise "The Arch" and the rest of the exercise catalog (seed data)
-- External auth provider (Auth0 vs Keycloak) — decide at lab 3
 - Video storage implementation (local folder first, then Azure Blob / Azurite or MinIO)
 - Optional CV technique check — not planned

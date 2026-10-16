@@ -2,7 +2,11 @@ using AstraKa.Api.Auth;
 using AstraKa.Api.ExceptionHandling;
 using AstraKa.Application;
 using AstraKa.Application.Common;
+using AstraKa.Domain.Enums;
 using AstraKa.Infrastructure;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,8 +20,27 @@ builder.Services.AddOpenApi();
 builder.Services.AddApplication(builder.Configuration["MediatR:LicenseKey"]);
 builder.Services.AddInfrastructure(builder.Configuration.GetConnectionString("Default")!);
 
-// Temporary: no real authentication yet - replaced by lab 3's OIDC validation.
-builder.Services.AddScoped<ICurrentUser, DevelopmentCurrentUser>();
+// Auth0 issues and signs the tokens; the API only validates them. Authority/Audience are not
+// secrets - see docs/domain-model.md's "Authentication & authorization" section.
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = builder.Configuration["Authentication:Authority"];
+        options.Audience = builder.Configuration["Authentication:Audience"];
+        options.MapInboundClaims = false; // keep raw JWT claim names (`sub`, not a legacy URI)
+    });
+
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("Wanderer", policy => policy.RequireClaim(AstraKaClaimTypes.Role, nameof(UserRole.Wanderer)))
+    .AddPolicy("Starshepherd", policy => policy.RequireClaim(AstraKaClaimTypes.Role, nameof(UserRole.Starshepherd)))
+    .AddPolicy("Oracle", policy => policy.RequireClaim(AstraKaClaimTypes.Role, nameof(UserRole.Oracle)))
+    .AddPolicy("AuthorOrOracle", policy => policy.AddRequirements(new AuthorOrOracleRequirement()));
+
+builder.Services.AddSingleton<IAuthorizationHandler, AuthorOrOracleAuthorizationHandler>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IClaimsTransformation, DatabaseClaimsTransformation>();
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
 // The one place exceptions become ProblemDetails responses, per CLAUDE.md.
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -32,6 +55,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandler();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 
