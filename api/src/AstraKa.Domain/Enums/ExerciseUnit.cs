@@ -5,7 +5,7 @@ namespace AstraKa.Domain.Enums;
 /// </summary>
 public enum ExerciseUnit
 {
-    Reps,
-    Seconds,
-    Breaths,
+    Reps = 1,
+    Seconds = 2,
+    Breaths = 3,
 }

@@ -17,7 +17,7 @@ Every person who signs in. Authentication is done by an external OIDC provider.
 | ExternalId | nvarchar(200) | `sub` claim from the provider's JWT. **Unique.** |
 | Email | nvarchar(256) | **Unique** |
 | Name | nvarchar(100) | Display name / nickname |
-| Role | enum → nvarchar(20) | `Wanderer`, `Starshepherd`, `Oracle` |
+| Role | enum → tinyint FK | `Wanderer` = 1, `Starshepherd` = 2, `Oracle` = 3. See [Lookup tables](#lookup-tables) |
 
 Oracle is just a User with role `Oracle`; it has no profile table and no UI (works via Scalar/Postman,
 created by seeding).
@@ -54,7 +54,7 @@ also derived from the sign if ever shown.
 | AuthorId | Guid? | FK → Starshepherd. **Null = system exercise** (seeded, editable only by Oracle) |
 | Name | nvarchar(100) | |
 | Description | nvarchar(2000) | |
-| Unit | enum → nvarchar(20) | What is counted: `Reps`, `Seconds`, `Breaths` |
+| Unit | enum → tinyint FK | What is counted: `Reps` = 1, `Seconds` = 2, `Breaths` = 3. See [Lookup tables](#lookup-tables) |
 | VideoUrl | nvarchar(500)? | Demo video by the author; the file lives in blob/file storage, DB keeps only the link |
 
 ### Course (program template)
@@ -66,7 +66,7 @@ also derived from the sign if ever shown.
 | Description | nvarchar(2000) | |
 | Promise | nvarchar(500) | What this course promises |
 | Price | decimal(10,2) | Set by the author |
-| Status | enum → nvarchar(20) | `Draft`, `Published` (enrollment open) |
+| Status | enum → tinyint FK | `Draft` = 1, `Published` = 2 (enrollment open). See [Lookup tables](#lookup-tables) |
 
 ### CourseSign (explicit M:N Course ↔ ZodiacSign, "Open to")
 | Attribute | Type | Notes |
@@ -127,7 +127,7 @@ The same exercise may appear several times in one day, so there is **no** unique
 | WandererId | Guid | **Composite PK**, FK → Wanderer ("Joins") |
 | CohortId | Guid | **Composite PK**, FK → Cohort ("In") |
 | EnrolledAt | datetime2 | |
-| Status | enum → nvarchar(20) | Stored: `Active`, `Left` (UI: "Gave up") |
+| Status | enum → tinyint FK | Stored: `Active` = 1, `Left` = 2 (UI: "Gave up"). See [Lookup tables](#lookup-tables) |
 | PaidPrice | decimal(10,2) | Snapshot of `Course.Price` at enrollment — a separate fact, not a duplicate |
 
 `Completed` is **computed**, not stored: status `Active` and the cohort has finished.
@@ -162,6 +162,25 @@ Extra exercises are ordinary DayExercise rows with `RevelationId` set.
 | CompletedAt | datetime2 | |
 
 Unique (DailyReportId, DayExerciseId).
+
+## Lookup tables
+
+Every enum that is actually persisted (not `CohortPhase`, which is computed only) is backed by a
+small lookup table instead of a free-text string, so the column is a real `tinyint` FK with
+referential integrity. Each enum's members get **explicit numeric values starting at 1**, which are
+exactly the seeded `Id`s below (`HasData`, no gaps, matches enum declaration order).
+
+| Table | Id (tinyint, PK) → Name (nvarchar(20), **unique**) | Owning column |
+|---|---|---|
+| UserRoles | 1 Wanderer, 2 Starshepherd, 3 Oracle | `Users.RoleId` |
+| ExerciseUnits | 1 Reps, 2 Seconds, 3 Breaths | `Exercises.UnitId` |
+| CourseStatuses | 1 Draft, 2 Published | `Courses.StatusId` |
+| EnrollmentStatuses | 1 Active, 2 Left | `Enrollments.StatusId` |
+
+All four owning FKs are `Restrict` on delete - a lookup row is fixed, seeded reference data and is
+never expected to be removed while anything still points at it. The lookup entity classes
+(`UserRoleLookup`, etc.) live only in Infrastructure; Domain entities still expose the plain enum
+property (`User.Role: UserRole`, …) with no change to how application code reads or writes them.
 
 ## Delete behavior (proposals — watch SQL Server "multiple cascade paths")
 

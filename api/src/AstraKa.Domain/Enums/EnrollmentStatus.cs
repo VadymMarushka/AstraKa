@@ -6,6 +6,6 @@ namespace AstraKa.Domain.Enums;
 /// </summary>
 public enum EnrollmentStatus
 {
-    Active,
-    Left,
+    Active = 1,
+    Left = 2,
 }

@@ -5,7 +5,7 @@ namespace AstraKa.Domain.Enums;
 /// </summary>
 public enum UserRole
 {
-    Wanderer,
-    Starshepherd,
-    Oracle,
+    Wanderer = 1,
+    Starshepherd = 2,
+    Oracle = 3,
 }

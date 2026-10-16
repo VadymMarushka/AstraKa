@@ -5,6 +5,6 @@ namespace AstraKa.Domain.Enums;
 /// </summary>
 public enum CourseStatus
 {
-    Draft,
-    Published,
+    Draft = 1,
+    Published = 2,
 }
