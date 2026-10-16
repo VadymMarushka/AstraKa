@@ -15,11 +15,14 @@ namespace AstraKa.Tests.Ado;
 /// </summary>
 public sealed class DatabaseFixture : IAsyncLifetime
 {
-    private const string ConnectionString =
+    private const string TestConnectionString =
         "Server=(localdb)\\MSSQLLocalDB;Database=AstraKa_Tests;Trusted_Connection=True;TrustServerCertificate=True";
 
     private ServiceProvider? _provider;
     private IServiceScope? _scope;
+
+    /// <summary>For tests that need their own independent <see cref="AppDbContext"/> instances (e.g. concurrency tests).</summary>
+    public string ConnectionString => TestConnectionString;
 
     public AppDbContext DbContext { get; private set; } = null!;
 
@@ -34,7 +37,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         var services = new ServiceCollection();
-        services.AddInfrastructure(ConnectionString);
+        services.AddInfrastructure(TestConnectionString);
         _provider = services.BuildServiceProvider();
 
         _scope = _provider.CreateScope();
