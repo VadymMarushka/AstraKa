@@ -1,0 +1,25 @@
+# Exercise catalog
+
+System exercises of AstraKa (seeded via `HasData`, `AuthorId = null`). Product text is English-only.
+
+- **Instructions** — how to perform the exercise (stored in `Exercise.Instructions`).
+- **Description** — the lore line shown with the exercise (stored in `Exercise.Description`).
+- **Unit** — what is counted: `Reps`, `Seconds` or `Breaths`.
+- Every exercise is performed facing the Wanderer's astral address ("home").
+
+12 exercises: 5 × Seconds, 4 × Reps, 3 × Breaths.
+
+| # | Name | Unit | Instructions | Description |
+|---|---|---|---|---|
+| 1 | **Beacon** | Seconds | Lie on your side with your legs stacked, supported on the forearm beneath you. Lift the hips so the body forms one straight line. Extend the free arm straight forward and point it toward home. Hold, then switch sides at the halfway point. Lower the bottom knee to the floor if the line breaks. | Be the line along which the light travels. Point at home, not near it. |
+| 2 | **Span** | Seconds | Lie on your back, knees bent, feet flat and hip-width apart, head toward home. Rest the arms along the body with the palms open and facing up. Lift the hips until knees, hips and shoulders form one line. Hold while breathing evenly. | Become the bridge by which the soul crosses back. Open your palms; it may wish to carry something. |
+| 3 | **Meridian** | Seconds | Stand facing home with the feet wide. Raise one arm diagonally forward and up, and lower the other diagonally back and down, so that both arms form one straight line through the body. Point with the index fingers and keep the gaze on the upper finger. Switch the arms at the halfway point. | One finger points to the zenith, the other to the ground. Between them there is only you. Keep the line straight. |
+| 4 | **Orbit** | Seconds | Sit cross-legged with the hands on the knees. Slowly circle the upper body around the center of the spine, about 6 seconds per circle, while the gaze stays fixed on home. Reverse the direction at the halfway point. | Circle the center without touching it. Do not look away from home; it has noticed before. |
+| 5 | **Lone Watcher** | Seconds | Stand facing home next to a wall or chair. Place the sole of one foot against the inner calf or ankle of the standing leg (never against the knee), palms together at the chest, gaze on the horizon. Hold, then switch legs at the halfway point. Touch the support if you wobble. | Stand on one leg, as the watchers do. The other leg is not needed tonight. |
+| 6 | **Homeward Bow** | Reps | Kneel facing home. Fold forward with the arms extended toward home and the forehead resting on the floor. Slowly return to kneeling with the hands on the knees. One rep = bow and return. | Bow to the place you cannot see. It has seen you. |
+| 7 | **First Offering** | Reps | Stand facing home with the palms joined at the chest. Slowly extend the arms forward with the palms turned up, as if giving something away, then draw the hands back to the chest. About 4 seconds out, 4 back. One rep = out and back. | Give something to the sky. Do not ask what. It will know. |
+| 8 | **Falling Star** | Reps | Stand facing home. Slowly lower yourself to kneeling, then sit, then lie down on your back with the arms and legs spread wide like a star, the gaze turned toward home. Pause for 2 seconds, then rise the same way. Use a hand on the floor for support if needed. One rep = down and up. | Fall slowly, so the Earth has time to prepare. Lie as a star lies. Rise slowly, so it has time to notice. |
+| 9 | **Zenith Reach** | Reps | Stand facing home with the feet hip-width apart. Raise both arms diagonally forward and up, reaching toward home, with the index fingers pointing and the gaze following them. Rise onto the toes at the same time. Lower slowly, about 4 seconds up and 4 down. One rep = up and down. | Point at the highest place in the sky above home. Return only when it has been located. |
+| 10 | **Resonance** | Breaths | Sit cross-legged facing home with the hands on the knees. Inhale through the nose for 4 seconds. Exhale for 6 seconds while humming one low steady note. Keep the jaw loose and the volume quiet. Never hold the breath. | The stars hum at a frequency only the aligned can hear. Begin by humming at it. |
+| 11 | **Quiet Tide** | Breaths | Lie on your back with the head toward home and the knees bent, one hand on the chest and the other on the belly. Inhale through the nose for 4 seconds so the belly rises, then exhale for 6 seconds so it falls. Never hold the breath. One breath = one rise and fall. | Let the sky rise and fall inside you. It is only borrowing the space. |
+| 12 | **Steady Flame** | Breaths | Sit cross-legged facing home. Hold one index finger upright in front of the face, pointing toward home like a candle. Inhale through the nose for 4 seconds, then exhale slowly through pursed lips so the finger-flame would sway but not go out. Never hold the breath. | Breathe on the flame, but do not extinguish it. Home is not that kind of place. |

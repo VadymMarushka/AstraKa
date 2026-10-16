@@ -257,6 +257,11 @@ namespace AstraKa.Infrastructure.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
+                    b.Property<string>("Instructions")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -277,6 +282,104 @@ namespace AstraKa.Infrastructure.Persistence.Migrations
                     b.HasIndex("Unit");
 
                     b.ToTable("Exercises");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("ada984f7-18c0-407d-85db-f2e4a345467a"),
+                            Description = "Be the line along which the light travels. Point at home, not near it.",
+                            Instructions = "Lie on your side with your legs stacked, supported on the forearm beneath you. Lift the hips so the body forms one straight line. Extend the free arm straight forward and point it toward home. Hold, then switch sides at the halfway point. Lower the bottom knee to the floor if the line breaks.",
+                            Name = "Beacon",
+                            Unit = (byte)2
+                        },
+                        new
+                        {
+                            Id = new Guid("b12345be-0505-40ff-acb3-a385ce5b53a0"),
+                            Description = "Become the bridge by which the soul crosses back. Open your palms; it may wish to carry something.",
+                            Instructions = "Lie on your back, knees bent, feet flat and hip-width apart, head toward home. Rest the arms along the body with the palms open and facing up. Lift the hips until knees, hips and shoulders form one line. Hold while breathing evenly.",
+                            Name = "Span",
+                            Unit = (byte)2
+                        },
+                        new
+                        {
+                            Id = new Guid("fad9002c-ec63-4853-ae89-cd478db86811"),
+                            Description = "One finger points to the zenith, the other to the ground. Between them there is only you. Keep the line straight.",
+                            Instructions = "Stand facing home with the feet wide. Raise one arm diagonally forward and up, and lower the other diagonally back and down, so that both arms form one straight line through the body. Point with the index fingers and keep the gaze on the upper finger. Switch the arms at the halfway point.",
+                            Name = "Meridian",
+                            Unit = (byte)2
+                        },
+                        new
+                        {
+                            Id = new Guid("c7e7a3ad-2d18-4966-9bce-c0c69ca2d8c0"),
+                            Description = "Circle the center without touching it. Do not look away from home; it has noticed before.",
+                            Instructions = "Sit cross-legged with the hands on the knees. Slowly circle the upper body around the center of the spine, about 6 seconds per circle, while the gaze stays fixed on home. Reverse the direction at the halfway point.",
+                            Name = "Orbit",
+                            Unit = (byte)2
+                        },
+                        new
+                        {
+                            Id = new Guid("df53500d-0502-494c-80f4-5074add1199f"),
+                            Description = "Stand on one leg, as the watchers do. The other leg is not needed tonight.",
+                            Instructions = "Stand facing home next to a wall or chair. Place the sole of one foot against the inner calf or ankle of the standing leg (never against the knee), palms together at the chest, gaze on the horizon. Hold, then switch legs at the halfway point. Touch the support if you wobble.",
+                            Name = "Lone Watcher",
+                            Unit = (byte)2
+                        },
+                        new
+                        {
+                            Id = new Guid("cb78039e-b011-4856-b6f1-1955674690ce"),
+                            Description = "Bow to the place you cannot see. It has seen you.",
+                            Instructions = "Kneel facing home. Fold forward with the arms extended toward home and the forehead resting on the floor. Slowly return to kneeling with the hands on the knees. One rep = bow and return.",
+                            Name = "Homeward Bow",
+                            Unit = (byte)1
+                        },
+                        new
+                        {
+                            Id = new Guid("169f5b0a-9451-4222-8115-b0d881cdeec6"),
+                            Description = "Give something to the sky. Do not ask what. It will know.",
+                            Instructions = "Stand facing home with the palms joined at the chest. Slowly extend the arms forward with the palms turned up, as if giving something away, then draw the hands back to the chest. About 4 seconds out, 4 back. One rep = out and back.",
+                            Name = "First Offering",
+                            Unit = (byte)1
+                        },
+                        new
+                        {
+                            Id = new Guid("53035a10-7991-4649-90e9-4dba38cc3231"),
+                            Description = "Fall slowly, so the Earth has time to prepare. Lie as a star lies. Rise slowly, so it has time to notice.",
+                            Instructions = "Stand facing home. Slowly lower yourself to kneeling, then sit, then lie down on your back with the arms and legs spread wide like a star, the gaze turned toward home. Pause for 2 seconds, then rise the same way. Use a hand on the floor for support if needed. One rep = down and up.",
+                            Name = "Falling Star",
+                            Unit = (byte)1
+                        },
+                        new
+                        {
+                            Id = new Guid("f621908e-c663-468f-872d-5de06632e0a4"),
+                            Description = "Point at the highest place in the sky above home. Return only when it has been located.",
+                            Instructions = "Stand facing home with the feet hip-width apart. Raise both arms diagonally forward and up, reaching toward home, with the index fingers pointing and the gaze following them. Rise onto the toes at the same time. Lower slowly, about 4 seconds up and 4 down. One rep = up and down.",
+                            Name = "Zenith Reach",
+                            Unit = (byte)1
+                        },
+                        new
+                        {
+                            Id = new Guid("32b2e728-63fb-4379-a642-308c06f925b0"),
+                            Description = "The stars hum at a frequency only the aligned can hear. Begin by humming at it.",
+                            Instructions = "Sit cross-legged facing home with the hands on the knees. Inhale through the nose for 4 seconds. Exhale for 6 seconds while humming one low steady note. Keep the jaw loose and the volume quiet. Never hold the breath.",
+                            Name = "Resonance",
+                            Unit = (byte)3
+                        },
+                        new
+                        {
+                            Id = new Guid("8975cb3e-32d5-4e2d-9eaa-546a20a12b13"),
+                            Description = "Let the sky rise and fall inside you. It is only borrowing the space.",
+                            Instructions = "Lie on your back with the head toward home and the knees bent, one hand on the chest and the other on the belly. Inhale through the nose for 4 seconds so the belly rises, then exhale for 6 seconds so it falls. Never hold the breath. One breath = one rise and fall.",
+                            Name = "Quiet Tide",
+                            Unit = (byte)3
+                        },
+                        new
+                        {
+                            Id = new Guid("401175c3-8c76-4727-8b87-10c330c89e91"),
+                            Description = "Breathe on the flame, but do not extinguish it. Home is not that kind of place.",
+                            Instructions = "Sit cross-legged facing home. Hold one index finger upright in front of the face, pointing toward home like a candle. Inhale through the nose for 4 seconds, then exhale slowly through pursed lips so the finger-flame would sway but not go out. Never hold the breath.",
+                            Name = "Steady Flame",
+                            Unit = (byte)3
+                        });
                 });
 
             modelBuilder.Entity("AstraKa.Domain.Entities.ExerciseCompletion", b =>
@@ -429,6 +532,80 @@ namespace AstraKa.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("ZodiacSigns");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "Aries",
+                            SequenceNumber = 1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "Taurus",
+                            SequenceNumber = 2
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "Gemini",
+                            SequenceNumber = 3
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "Cancer",
+                            SequenceNumber = 4
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Name = "Leo",
+                            SequenceNumber = 5
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Name = "Virgo",
+                            SequenceNumber = 6
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Name = "Libra",
+                            SequenceNumber = 7
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Name = "Scorpio",
+                            SequenceNumber = 8
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Name = "Sagittarius",
+                            SequenceNumber = 9
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Name = "Capricorn",
+                            SequenceNumber = 10
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Name = "Aquarius",
+                            SequenceNumber = 11
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Name = "Pisces",
+                            SequenceNumber = 12
+                        });
                 });
 
             modelBuilder.Entity("AstraKa.Infrastructure.Persistence.Lookups.CourseStatusLookup", b =>

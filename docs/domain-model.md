@@ -53,9 +53,12 @@ also derived from the sign if ever shown.
 | Id | Guid | PK |
 | AuthorId | Guid? | FK → Starshepherd. **Null = system exercise** (seeded, editable only by Oracle) |
 | Name | nvarchar(100) | |
-| Description | nvarchar(2000) | |
+| Description | nvarchar(2000) | The lore line shown with the exercise |
+| Instructions | nvarchar(2000) | How to perform the exercise |
 | Unit | enum → tinyint FK | What is counted: `Reps` = 1, `Seconds` = 2, `Breaths` = 3. See [Lookup tables](#lookup-tables) |
 | VideoUrl | nvarchar(500)? | Demo video by the author; the file lives in blob/file storage, DB keeps only the link |
+
+Full system catalog (seeded via `HasData`): `exercise-catalog.md`.
 
 ### Course (program template)
 | Attribute | Type | Notes |

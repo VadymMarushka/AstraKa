@@ -18,6 +18,9 @@ public class Exercise
 
     public string Description { get; set; } = string.Empty;
 
+    /// <summary>How to perform the exercise, separate from <see cref="Description"/>'s lore line.</summary>
+    public string Instructions { get; set; } = string.Empty;
+
     public ExerciseUnit Unit { get; set; }
 
     public string? VideoUrl { get; set; }
@@ -32,7 +35,7 @@ public class Exercise
     {
     }
 
-    public Exercise(Guid id, Guid? authorId, string name, string description, ExerciseUnit unit, string? videoUrl = null)
+    public Exercise(Guid id, Guid? authorId, string name, string description, string instructions, ExerciseUnit unit, string? videoUrl = null)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -43,6 +46,7 @@ public class Exercise
         AuthorId = authorId;
         Name = name;
         Description = description;
+        Instructions = instructions;
         Unit = unit;
         VideoUrl = videoUrl;
     }

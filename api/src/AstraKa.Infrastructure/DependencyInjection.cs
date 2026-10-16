@@ -1,5 +1,6 @@
 using AstraKa.Application.Common;
 using AstraKa.Infrastructure.Persistence;
+using AstraKa.Infrastructure.Persistence.Seeding;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,7 +14,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, string connectionString)
     {
-        services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString));
+        services.AddDbContext<AppDbContext>(options => options
+            .UseSqlServer(connectionString)
+            .UseSeeding(TestDataSeeder.Seed)
+            .UseAsyncSeeding(TestDataSeeder.SeedAsync));
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
         return services;

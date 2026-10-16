@@ -43,19 +43,7 @@ A catalog of astral exercises: system ones plus those added by Starshepherds. Ea
 **reps**, **seconds** or **breaths**. An exercise may have a demo video from its author.
 Some are done on each side — the video explains it, or ask your Starshepherd.
 
-Seed examples (catalog will grow):
-
-| Name | Real basis | Unit |
-|---|---|---|
-| Eclipse | Side plank, each side: your body blocks the light | Seconds |
-| The Arch *(working name)* | Glute bridge | Seconds |
-| Crescent | High lunge, arms up (crescent pose) | Seconds |
-| Meridian | Warrior II: arms divide the sky in half | Seconds |
-| Homeward Gaze | Breathing with the head raised toward your sign's direction | Breaths |
-
-Other ideas from brainstorming (optional): The Horizon (plank), Five-Pointed Self (star pose),
-Axis (tree pose), Summer Triangle (triangle pose), Starburst (jumping jacks), Starfall (squats),
-Orbits (arm circles), Comet (superman), Square of Saturn (box breathing 4-4-4-4), Return to Void (lie down, do nothing).
+Full system catalog - names, units, instructions and lore lines: `exercise-catalog.md`.
 
 ## Courses and Constellations
 
