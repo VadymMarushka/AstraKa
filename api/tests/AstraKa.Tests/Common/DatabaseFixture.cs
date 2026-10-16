@@ -48,8 +48,12 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Default"] = TestConnectionString })
+            .Build();
+
         var services = new ServiceCollection();
-        services.AddInfrastructure(TestConnectionString);
+        services.AddInfrastructure(configuration);
         _provider = services.BuildServiceProvider();
 
         _scope = _provider.CreateScope();
@@ -78,6 +82,24 @@ public sealed class DatabaseFixture : IAsyncLifetime
                     .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
             });
         });
+
+        // Fail fast: Program.cs's AddInfrastructure call reads its connection string lazily
+        // specifically so a ConfigureAppConfiguration override like the one above can win - but if
+        // that ever regresses (e.g. back to an eagerly-read string), every test here would silently
+        // run against the dev AstraKa database instead of AstraKa_Tests. Check what the test host
+        // itself actually resolves, not just what we told it to use.
+        using var verificationScope = _apiFactory.Services.CreateScope();
+        var effectiveConnectionString = verificationScope.ServiceProvider
+            .GetRequiredService<AppDbContext>().Database.GetConnectionString();
+        // EF Core normalizes "Database=" to "Initial Catalog=" when echoing the connection string back.
+        if (effectiveConnectionString is null || !effectiveConnectionString.Contains("Initial Catalog=AstraKa_Tests", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Test host is not using the AstraKa_Tests database - it resolved '{effectiveConnectionString}'. " +
+                "The ConfigureAppConfiguration override in DatabaseFixture isn't taking effect (check that " +
+                "AddInfrastructure reads its connection string lazily from IConfiguration, not eagerly as a " +
+                "pre-captured string), so tests would otherwise silently run against the dev database.");
+        }
     }
 
     public async Task DisposeAsync()

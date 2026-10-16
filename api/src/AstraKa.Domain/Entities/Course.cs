@@ -58,9 +58,61 @@ public class Course
         Price = price;
     }
 
-    /// <summary>Opens the course for enrollment. No re-publish guard is specified, so none is added.</summary>
+    public void Update(string name, string description, string promise, decimal price)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Course name cannot be empty.", nameof(name));
+        }
+
+        if (price < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(price), price, "Price cannot be negative.");
+        }
+
+        Name = name;
+        Description = description;
+        Promise = promise;
+        Price = price;
+    }
+
+    /// <summary>
+    /// Diffs against the current set rather than clearing and re-adding - with the composite key
+    /// (CourseId, ZodiacSignId), removing and re-adding the same sign in one SaveChanges can be
+    /// tracked incorrectly. Only signs that actually change are removed/added.
+    /// </summary>
+    public void ReplaceSigns(IEnumerable<int> zodiacSignIds)
+    {
+        var newIds = zodiacSignIds.Distinct().ToHashSet();
+
+        foreach (var existing in CourseSigns.Where(cs => !newIds.Contains(cs.ZodiacSignId)).ToList())
+        {
+            CourseSigns.Remove(existing);
+        }
+
+        var currentIds = CourseSigns.Select(cs => cs.ZodiacSignId).ToHashSet();
+        foreach (var zodiacSignId in newIds.Where(id => !currentIds.Contains(id)))
+        {
+            CourseSigns.Add(new CourseSign(Id, zodiacSignId));
+        }
+    }
+
+    /// <summary>
+    /// Requires <see cref="CourseDays"/> to have been loaded (e.g. via Include) - it's a private-set
+    /// collection initialized empty, so an un-included course would otherwise always look day-less.
+    /// </summary>
     public void Publish()
     {
+        if (Status == CourseStatus.Published)
+        {
+            throw new DomainException("This course is already published.");
+        }
+
+        if (CourseDays.Count == 0)
+        {
+            throw new DomainException("A course with no days cannot be published.");
+        }
+
         Status = CourseStatus.Published;
     }
 

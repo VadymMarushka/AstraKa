@@ -6,9 +6,10 @@ namespace AstraKa.Application;
 
 /// <summary>
 /// Composition entry point for this layer. Takes the raw MediatR license key string rather than
-/// <see cref="Microsoft.Extensions.Configuration.IConfiguration"/>, the same reason
-/// <c>Infrastructure.AddInfrastructure</c> takes a raw connection string - Api already depends on
-/// the configuration system and reads the value itself.
+/// <see cref="Microsoft.Extensions.Configuration.IConfiguration"/> since nothing else here needs
+/// deferred/lazy config resolution - unlike <c>Infrastructure.AddInfrastructure</c>, which takes
+/// <see cref="Microsoft.Extensions.Configuration.IConfiguration"/> itself so the connection string
+/// is read lazily, after a WebApplicationFactory-based test's configuration override has landed.
 /// </summary>
 public static class DependencyInjection
 {

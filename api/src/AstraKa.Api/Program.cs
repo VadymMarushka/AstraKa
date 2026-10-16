@@ -21,7 +21,7 @@ builder.Services.AddControllers()
 builder.Services.AddOpenApi();
 
 builder.Services.AddApplication(builder.Configuration["MediatR:LicenseKey"]);
-builder.Services.AddInfrastructure(builder.Configuration.GetConnectionString("Default")!);
+builder.Services.AddInfrastructure(builder.Configuration);
 
 // Auth0 issues and signs the tokens; the API only validates them. Authority/Audience are not
 // secrets - see docs/domain-model.md's "Authentication & authorization" section.

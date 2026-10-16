@@ -83,7 +83,6 @@ internal static class TestDataSeeder
 
         // HOMEWARD - any sign, 5 days: exercises, exercises, meeting-only, exercises, exercises.
         var homeward = new Course(Guid.NewGuid(), mira.UserId, "HOMEWARD", "Basic alignment for newcomers.", "You will know which way is home.", 19.99m);
-        homeward.Publish();
 
         var hwDay1 = new CourseDay(Guid.NewGuid(), homeward.Id, 1, "Soul's departure from Earth orbit");
         var hwDay1Ex = AddExercises(db, hwDay1.Id, (exerciseIds["Quiet Tide"], 2, 6), (exerciseIds["Steady Flame"], 2, 6));
@@ -99,12 +98,18 @@ internal static class TestDataSeeder
         var hwDay5 = new CourseDay(Guid.NewGuid(), homeward.Id, 5, "Alignment, probably");
         var hwDay5Ex = AddExercises(db, hwDay5.Id, (exerciseIds["Beacon"], 2, 25), (exerciseIds["First Offering"], 3, 8));
 
+        // Days go on the Course's own navigation (not just the DbSet) so Publish() - which requires
+        // at least one day - sees them.
+        foreach (var day in new[] { hwDay1, hwDay2, hwDay3, hwDay4, hwDay5 })
+        {
+            homeward.CourseDays.Add(day);
+        }
+
+        homeward.Publish();
         db.Courses.Add(homeward);
-        db.CourseDays.AddRange(hwDay1, hwDay2, hwDay3, hwDay4, hwDay5);
 
         // For Cancers - Cancer only, 4 days: exercises, exercises, meeting-only, exercises.
         var forCancers = new Course(Guid.NewGuid(), desmond.UserId, "For Cancers", "A program written for the home-feeling sign.", "You will feel less like you forgot something.", 24.99m);
-        forCancers.Publish();
         var forCancersSign = new CourseSign(forCancers.Id, 4); // Cancer
 
         var fcDay1 = new CourseDay(Guid.NewGuid(), forCancers.Id, 1, "Returning to the shell");
@@ -118,13 +123,17 @@ internal static class TestDataSeeder
         var fcDay4 = new CourseDay(Guid.NewGuid(), forCancers.Id, 4, "Full moon accountability");
         AddExercises(db, fcDay4.Id, (exerciseIds["Meridian"], 2, 30), (exerciseIds["Resonance"], 2, 6));
 
+        foreach (var day in new[] { fcDay1, fcDay2, fcDay3, fcDay4 })
+        {
+            forCancers.CourseDays.Add(day);
+        }
+
+        forCancers.Publish();
         db.Courses.Add(forCancers);
         db.CourseSigns.Add(forCancersSign);
-        db.CourseDays.AddRange(fcDay1, fcDay2, fcDay3, fcDay4);
 
         // Mercury Retrograde Survival - any sign, 3 days: exercises, exercises, exercises.
         var mercury = new Course(Guid.NewGuid(), priya.UserId, "Mercury Retrograde Survival", "Survive the retrograde with your orbit intact.", "Nothing will get worse while you are aligned.", 14.99m);
-        mercury.Publish();
 
         var mrDay1 = new CourseDay(Guid.NewGuid(), mercury.Id, 1, "Everything is late, including this");
         var mrDay1Ex = AddExercises(db, mrDay1.Id, (exerciseIds["Steady Flame"], 2, 6), (exerciseIds["Zenith Reach"], 3, 8));
@@ -135,12 +144,16 @@ internal static class TestDataSeeder
         var mrDay3 = new CourseDay(Guid.NewGuid(), mercury.Id, 3, "It's probably over now");
         AddExercises(db, mrDay3.Id, (exerciseIds["Span"], 3, 30), (exerciseIds["First Offering"], 3, 8));
 
+        foreach (var day in new[] { mrDay1, mrDay2, mrDay3 })
+        {
+            mercury.CourseDays.Add(day);
+        }
+
+        mercury.Publish();
         db.Courses.Add(mercury);
-        db.CourseDays.AddRange(mrDay1, mrDay2, mrDay3);
 
         // Saturn Return Recovery - Capricorn/Aquarius/Pisces, 4 days: exercises, exercises, meeting-only, exercises.
         var saturnReturn = new Course(Guid.NewGuid(), desmond.UserId, "Saturn Return Recovery", "For those approaching 29 whose life is falling apart.", "It will still be falling apart, but on schedule.", 29.99m);
-        saturnReturn.Publish();
         var srSigns = new[] { new CourseSign(saturnReturn.Id, 10), new CourseSign(saturnReturn.Id, 11), new CourseSign(saturnReturn.Id, 12) }; // Capricorn, Aquarius, Pisces
 
         var srDay1 = new CourseDay(Guid.NewGuid(), saturnReturn.Id, 1, "The reckoning begins");
@@ -154,9 +167,14 @@ internal static class TestDataSeeder
         var srDay4 = new CourseDay(Guid.NewGuid(), saturnReturn.Id, 4, "Emerging, allegedly wiser");
         AddExercises(db, srDay4.Id, (exerciseIds["Homeward Bow"], 3, 8), (exerciseIds["Steady Flame"], 2, 6));
 
+        foreach (var day in new[] { srDay1, srDay2, srDay3, srDay4 })
+        {
+            saturnReturn.CourseDays.Add(day);
+        }
+
+        saturnReturn.Publish();
         db.Courses.Add(saturnReturn);
         db.CourseSigns.AddRange(srSigns);
-        db.CourseDays.AddRange(srDay1, srDay2, srDay3, srDay4);
 
         // ---------- Cohorts ----------
 
