@@ -11,11 +11,19 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Scalar.AspNetCore" Version="2.18.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\AstraKa.Application\AstraKa.Application.csproj" />
     <ProjectReference Include="..\AstraKa.Infrastructure\AstraKa.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <!-- Lets AstraKa.Tests use WebApplicationFactory<Program> against the top-level-statement Program class. -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>AstraKa.Tests</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 
 </Project>
