@@ -12,14 +12,14 @@ namespace AstraKa.Api.ExceptionHandling;
 /// The one place exceptions become HTTP responses, per CLAUDE.md: validation -> 400 with field
 /// errors, <see cref="NotFoundException"/> -> 404, <see cref="DomainException"/> -> 409,
 /// <see cref="DbUpdateConcurrencyException"/> -> 409, a uniqueness violation that reaches SQL
-/// Server directly -> 409, everything else -> 500 with no details outside Development.
+/// Server directly -> 409, everything else -> 500 with no details outside Development. Every
+/// expected (non-500) case logs Information with just the message; only the 500 path logs Error
+/// with the full exception.
 /// </summary>
 internal sealed class GlobalExceptionHandler(IHostEnvironment environment, ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
-        logger.LogError(exception, "Unhandled exception while processing {Method} {Path}", httpContext.Request.Method, httpContext.Request.Path);
-
         var problem = exception switch
         {
             ValidationException validationException => BuildValidationProblem(validationException),
@@ -30,6 +30,18 @@ internal sealed class GlobalExceptionHandler(IHostEnvironment environment, ILogg
                 BuildProblem(StatusCodes.Status409Conflict, "Conflict", "A record with these values already exists."),
             _ => BuildProblem(StatusCodes.Status500InternalServerError, "An unexpected error occurred.", environment.IsDevelopment() ? exception.ToString() : null),
         };
+
+        // Expected exceptions (anything that isn't the 500 fallback) are routine - just the
+        // message, no stack trace. Only genuinely unexpected ones get logged at Error with the
+        // full exception.
+        if (problem.Status == StatusCodes.Status500InternalServerError)
+        {
+            logger.LogError(exception, "Unhandled exception while processing {Method} {Path}", httpContext.Request.Method, httpContext.Request.Path);
+        }
+        else
+        {
+            logger.LogInformation("{Method} {Path} -> {Status}: {Message}", httpContext.Request.Method, httpContext.Request.Path, problem.Status, exception.Message);
+        }
 
         httpContext.Response.StatusCode = problem.Status!.Value;
         await httpContext.Response.WriteAsJsonAsync(problem, cancellationToken);
