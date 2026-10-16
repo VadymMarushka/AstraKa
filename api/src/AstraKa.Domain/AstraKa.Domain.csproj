@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Domain: entities, enums and business rules. The innermost layer, so it
+    references nothing - neither other projects nor infrastructure packages.
+  -->
+
+</Project>

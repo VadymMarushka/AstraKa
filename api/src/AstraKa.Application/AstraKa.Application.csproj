@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Application: use cases (MediatR commands/queries), validators, DTOs and the
+    interfaces the outer layers implement (IAppDbContext, ICurrentUser,
+    IHoroscopeProvider, ADO.NET repositories). Depends on Domain only.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\AstraKa.Domain\AstraKa.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

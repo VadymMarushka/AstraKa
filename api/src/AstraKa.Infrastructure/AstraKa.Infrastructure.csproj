@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Infrastructure: EF Core DbContext and entity configurations, migrations,
+    seeding, ADO.NET repositories, external HTTP clients. Implements the
+    Application interfaces, so it depends on Application (and Domain through it).
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\AstraKa.Application\AstraKa.Application.csproj" />
+  </ItemGroup>
+
+</Project>

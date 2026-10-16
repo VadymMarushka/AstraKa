@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AstraKa.Api/AstraKa.Api.csproj" />
+    <Project Path="src/AstraKa.Application/AstraKa.Application.csproj" />
+    <Project Path="src/AstraKa.Domain/AstraKa.Domain.csproj" />
+    <Project Path="src/AstraKa.Infrastructure/AstraKa.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AstraKa.Tests/AstraKa.Tests.csproj" />
+  </Folder>
+</Solution>
