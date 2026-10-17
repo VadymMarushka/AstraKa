@@ -258,7 +258,7 @@ internal static class TestDataSeeder
         // Yuki - reports days 1-2, then leaves; no activity afterwards.
         Report(hwaYuki, hwaDay1Date, 4, hwDay1Ex, full: true);
         Report(hwaYuki, hwaDay2Date, 3, hwDay2Ex, full: true);
-        hwaYuki.Leave();
+        hwaYuki.Leave(CohortPhase.Running); // still running in-story, at the point she leaves
 
         // Ingrid - flat in Imbalance throughout.
         Report(hwaIngrid, hwaDay1Date, 5, hwDay1Ex, full: true);

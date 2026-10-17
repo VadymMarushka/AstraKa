@@ -45,12 +45,18 @@ public class Enrollment
         EnrolledAt = enrolledAt;
     }
 
-    /// <summary>Active -> Left. Money already paid is never refunded.</summary>
-    public void Leave()
+    /// <summary>Active -> Left. Money already paid is never refunded. Cannot run twice, and
+    /// cannot run once the cohort finished and the enrollment is already completed.</summary>
+    public void Leave(CohortPhase cohortPhase)
     {
         if (Status == EnrollmentStatus.Left)
         {
             throw new DomainException("This enrollment has already been left.");
+        }
+
+        if (IsCompleted(cohortPhase))
+        {
+            throw new DomainException("This enrollment is already completed and cannot be left.");
         }
 
         Status = EnrollmentStatus.Left;

@@ -1,5 +1,6 @@
 using AstraKa.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace AstraKa.Application.Common;
 
@@ -9,6 +10,14 @@ namespace AstraKa.Application.Common;
 /// </summary>
 public interface IAppDbContext
 {
+    /// <summary>
+    /// EF Core's own transaction API, not a new abstraction - forwards <c>DbContext.Database</c>,
+    /// which <c>AppDbContext</c> already has for free. Lets a handler open an explicit
+    /// transaction (<c>Database.BeginTransactionAsync</c>) when a business operation needs one
+    /// made visible, without a Unit-of-Work wrapper type.
+    /// </summary>
+    DatabaseFacade Database { get; }
+
     DbSet<User> Users { get; }
 
     DbSet<Wanderer> Wanderers { get; }
