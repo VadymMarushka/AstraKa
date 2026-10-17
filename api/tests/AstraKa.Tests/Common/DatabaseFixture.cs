@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace AstraKa.Tests.Common;
 
@@ -46,6 +47,11 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
     public IReportRepository Reports { get; private set; } = null!;
 
+    /// <summary>The clock the test host's handlers see instead of the real one - defaults to real
+    /// time so seeded data's relative dates stay consistent. Shared across the whole collection:
+    /// any test that calls <c>SetUtcNow</c> must restore the original value in a finally block.</summary>
+    public FixedTimeProvider Clock { get; private set; } = null!;
+
     public async Task InitializeAsync()
     {
         var configuration = new ConfigurationBuilder()
@@ -69,17 +75,22 @@ public sealed class DatabaseFixture : IAsyncLifetime
         CourseProgram = _provider.GetRequiredService<ICourseProgramRepository>();
         Reports = _provider.GetRequiredService<IReportRepository>();
 
+        Clock = new FixedTimeProvider(DateTimeOffset.UtcNow);
+
         _apiFactory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
                 new Dictionary<string, string?> { ["ConnectionStrings:Default"] = TestConnectionString }));
 
             // Swap Auth0 JWT validation for the test scheme, which reads X-Test-Sub/X-Test-Email
-            // headers instead of a real bearer token.
+            // headers instead of a real bearer token. Swap the clock too, so tests can control it.
             builder.ConfigureTestServices(apiServices =>
             {
                 apiServices.AddAuthentication(TestAuthHandler.SchemeName)
                     .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(TestAuthHandler.SchemeName, _ => { });
+
+                apiServices.RemoveAll<TimeProvider>();
+                apiServices.AddSingleton<TimeProvider>(Clock);
             });
         });
 

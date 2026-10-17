@@ -72,6 +72,40 @@ public class Cohort
         SeatsTaken++;
     }
 
+    /// <summary>Guard for scheduling: a constellation must start after today. Seed data is exempt
+    /// - it is constructed directly through the constructor, never through this.</summary>
+    public void EnsureScheduledInFuture(DateOnly today, DateOnly startDate)
+    {
+        if (startDate <= today)
+        {
+            throw new DomainException("A constellation must be scheduled to start after today.");
+        }
+    }
+
+    /// <summary>
+    /// Full update - cannot run once the cohort has started, the *new* StartDate must still be in
+    /// the future (otherwise an upcoming cohort could be moved into the past), and seats already
+    /// taken can never be orphaned by shrinking the limit below them.
+    /// </summary>
+    public void Update(DateOnly today, DateOnly startDate, int seatLimit)
+    {
+        EnsureNotStarted(today);
+        EnsureScheduledInFuture(today, startDate);
+
+        if (seatLimit <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(seatLimit), seatLimit, "Seat limit must be greater than zero.");
+        }
+
+        if (seatLimit < SeatsTaken)
+        {
+            throw new DomainException($"Seat limit cannot be set below the {SeatsTaken} seat(s) already taken.");
+        }
+
+        StartDate = startDate;
+        SeatLimit = seatLimit;
+    }
+
     /// <summary>Last day of the course, derived from how many days the course program has.</summary>
     public DateOnly GetEndDate(int courseDayCount)
     {

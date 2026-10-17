@@ -30,6 +30,10 @@ public static class DependencyInjection
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 
+        // Handlers that need "today" (e.g. Cohort's scheduling rules) take this instead of calling
+        // DateTime.UtcNow directly, so a test can swap in a controllable clock.
+        services.AddSingleton(TimeProvider.System);
+
         return services;
     }
 }
