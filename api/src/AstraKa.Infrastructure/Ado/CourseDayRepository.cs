@@ -1,4 +1,5 @@
 using AstraKa.Application.CourseProgram;
+using AstraKa.Domain.Enums;
 using Microsoft.Data.SqlClient;
 
 namespace AstraKa.Infrastructure.Ado;
@@ -65,6 +66,63 @@ internal sealed class CourseDayRepository(string connectionString) : ICourseDayR
         }
 
         return results;
+    }
+
+    public async Task<IReadOnlyList<CourseDayWithExercisesRecord>> GetProgramByCourseIdAsync(Guid courseId, CancellationToken ct)
+    {
+        await using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync(ct);
+
+        // LEFT JOIN, not INNER - a meeting-only day (zero base-program exercises) must still come
+        // back. RevelationId IS NULL keeps this to the base program only, per the task's scope.
+        await using var command = new SqlCommand(
+            """
+            SELECT cd.Id AS DayId, cd.DayNumber, cd.Title, cd.Description, cd.MeetLink,
+                   de.Id AS DayExerciseId, de.OrderNumber, de.Sets, de.Amount, e.Name AS ExerciseName, e.UnitId
+            FROM CourseDays cd
+            LEFT JOIN DayExercises de ON de.CourseDayId = cd.Id AND de.RevelationId IS NULL
+            LEFT JOIN Exercises e ON e.Id = de.ExerciseId
+            WHERE cd.CourseId = @CourseId
+            ORDER BY cd.DayNumber, de.OrderNumber;
+            """,
+            connection);
+        command.Parameters.AddWithValue("@CourseId", courseId);
+
+        // The JOIN comes back as flat rows (one per day-exercise, or one bare row for a day with
+        // none) - grouped back into one record per day here, in the order SQL already gave us.
+        var days = new List<CourseDayWithExercisesRecord>();
+        var exercisesByDayId = new Dictionary<Guid, List<ProgramExerciseRecord>>();
+
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            var dayId = reader.GetGuid(0);
+            if (!exercisesByDayId.TryGetValue(dayId, out var exercises))
+            {
+                exercises = new List<ProgramExerciseRecord>();
+                exercisesByDayId[dayId] = exercises;
+                days.Add(new CourseDayWithExercisesRecord(
+                    dayId,
+                    reader.GetInt32(1),
+                    reader.GetString(2),
+                    reader.IsDBNull(3) ? null : reader.GetString(3),
+                    reader.IsDBNull(4) ? null : reader.GetString(4),
+                    exercises));
+            }
+
+            if (!reader.IsDBNull(5))
+            {
+                exercises.Add(new ProgramExerciseRecord(
+                    reader.GetGuid(5),
+                    reader.GetString(9),
+                    (ExerciseUnit)reader.GetByte(10),
+                    reader.GetInt32(7),
+                    reader.GetInt32(8),
+                    reader.GetInt32(6)));
+            }
+        }
+
+        return days;
     }
 
     public async Task<bool> UpdateAsync(Guid id, string title, string? description, string? meetLink, CancellationToken ct)

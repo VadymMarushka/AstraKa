@@ -57,7 +57,7 @@ public class ReportRepositoryTests(DatabaseFixture fixture)
     [Fact]
     public async Task GetCourseStatisticsAsync_reports_HOMEWARDs_enrollment_count_revenue_and_average_harmony()
     {
-        var statistics = await fixture.Reports.GetCourseStatisticsAsync(CancellationToken.None);
+        var statistics = await fixture.Reports.GetCourseStatisticsAsync(null, CancellationToken.None);
 
         var homeward = Assert.Single(statistics, s => s.CourseName == "HOMEWARD");
         // HOMEWARD has 5 enrollments in the finished cohort and 2 in the upcoming one.

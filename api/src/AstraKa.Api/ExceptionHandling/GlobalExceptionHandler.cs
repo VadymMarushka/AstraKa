@@ -12,7 +12,8 @@ namespace AstraKa.Api.ExceptionHandling;
 /// The one place exceptions become HTTP responses, per CLAUDE.md: validation -> 400 with field
 /// errors, <see cref="NotFoundException"/> -> 404, <see cref="DomainException"/> -> 409,
 /// <see cref="DbUpdateConcurrencyException"/> -> 409, a uniqueness or FK-restrict violation that
-/// reaches SQL Server directly -> 409, everything else -> 500 with no details outside Development.
+/// reaches SQL Server directly -> 409 (whether wrapped in EF Core's <see cref="DbUpdateException"/>
+/// or raised raw by ADO.NET code), everything else -> 500 with no details outside Development.
 /// Every expected (non-500) case logs Information with just the message; only the 500 path logs
 /// Error with the full exception.
 /// </summary>
@@ -26,10 +27,17 @@ internal sealed class GlobalExceptionHandler(IHostEnvironment environment, ILogg
             NotFoundException notFound => BuildProblem(StatusCodes.Status404NotFound, "Not found", notFound.Message),
             DomainException domainException => BuildProblem(StatusCodes.Status409Conflict, "Conflict", domainException.Message),
             DbUpdateConcurrencyException => BuildProblem(StatusCodes.Status409Conflict, "Conflict", "The resource was modified by someone else. Reload and try again."),
-            DbUpdateException dbUpdateException when IsUniqueConstraintViolation(dbUpdateException) =>
+            DbUpdateException dbUpdateException when dbUpdateException.InnerException is SqlException sqlException && IsUniqueConstraintViolation(sqlException) =>
                 BuildProblem(StatusCodes.Status409Conflict, "Conflict", "A record with these values already exists."),
-            DbUpdateException dbUpdateException when IsForeignKeyViolation(dbUpdateException) =>
+            DbUpdateException dbUpdateException when dbUpdateException.InnerException is SqlException sqlException && IsForeignKeyViolation(sqlException) =>
                 BuildProblem(StatusCodes.Status409Conflict, "Conflict", "This record is still referenced by other data and cannot be deleted."),
+            // ADO.NET code (Infrastructure/Ado) talks to SQL Server directly - a uniqueness or FK
+            // violation there surfaces as a raw SqlException, never wrapped in a DbUpdateException,
+            // so it needs its own cases rather than falling through to the 500 fallback below.
+            SqlException sqlException when IsUniqueConstraintViolation(sqlException) =>
+                BuildProblem(StatusCodes.Status409Conflict, "Conflict", "A record with these values already exists."),
+            SqlException sqlException when IsForeignKeyViolation(sqlException) =>
+                BuildProblem(StatusCodes.Status409Conflict, "Conflict", "This operation references data that doesn't exist, or data that is still in use."),
             _ => BuildProblem(StatusCodes.Status500InternalServerError, "An unexpected error occurred.", environment.IsDevelopment() ? exception.ToString() : null),
         };
 
@@ -54,23 +62,23 @@ internal sealed class GlobalExceptionHandler(IHostEnvironment environment, ILogg
     /// A uniqueness violation (unique constraint 2627 or unique index 2601) that reached SQL Server
     /// directly - distinct from the onboarding 409s, which are raised deliberately as
     /// <see cref="DomainException"/> before ever reaching the database. This is the safety net for
-    /// the cases that get past an application-level check (e.g. a race).
+    /// the cases that get past an application-level check (e.g. a race), for both EF Core (wrapped
+    /// in <see cref="DbUpdateException"/>) and ADO.NET (raised raw) callers.
     /// </summary>
-    private static bool IsUniqueConstraintViolation(DbUpdateException exception)
+    private static bool IsUniqueConstraintViolation(SqlException exception)
     {
-        return exception.InnerException is SqlException sqlException
-            && (sqlException.Number == SqlErrorNumbers.UniqueConstraintViolation || sqlException.Number == SqlErrorNumbers.UniqueIndexViolation);
+        return exception.Number == SqlErrorNumbers.UniqueConstraintViolation || exception.Number == SqlErrorNumbers.UniqueIndexViolation;
     }
 
     /// <summary>
-    /// A Restrict FK violation reaching SQL Server directly - the safety net for the race between
-    /// an explicit "is this still in use" check (e.g. <c>DeleteExerciseCommandHandler</c>) and the
-    /// actual delete.
+    /// A Restrict FK violation (or a CHECK constraint violation - SQL Server uses 547 for both)
+    /// reaching SQL Server directly - the safety net for the race between an explicit "is this
+    /// still in use" check (e.g. <c>DeleteExerciseCommandHandler</c>) and the actual delete, for
+    /// both EF Core and ADO.NET callers.
     /// </summary>
-    private static bool IsForeignKeyViolation(DbUpdateException exception)
+    private static bool IsForeignKeyViolation(SqlException exception)
     {
-        return exception.InnerException is SqlException sqlException
-            && sqlException.Number == SqlErrorNumbers.ForeignKeyConstraintViolation;
+        return exception.Number == SqlErrorNumbers.ForeignKeyConstraintViolation;
     }
 
     private static ValidationProblemDetails BuildValidationProblem(ValidationException exception)

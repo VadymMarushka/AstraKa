@@ -11,7 +11,8 @@ public interface IReportRepository
     Task<IReadOnlyList<CohortParticipantRecord>> GetCohortParticipantsAsync(
         Guid cohortId, EnrollmentStatus? statusFilter, CohortParticipantSort sortBy, bool descending, CancellationToken ct);
 
-    Task<IReadOnlyList<CourseStatisticsRecord>> GetCourseStatisticsAsync(CancellationToken ct);
+    /// <summary>Every course's statistics, or just one when <paramref name="courseId"/> is given.</summary>
+    Task<IReadOnlyList<CourseStatisticsRecord>> GetCourseStatisticsAsync(Guid? courseId, CancellationToken ct);
 }
 
 public enum CohortParticipantSort

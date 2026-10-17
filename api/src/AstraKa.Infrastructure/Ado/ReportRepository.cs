@@ -60,7 +60,7 @@ internal sealed class ReportRepository(string connectionString) : IReportReposit
         return results;
     }
 
-    public async Task<IReadOnlyList<CourseStatisticsRecord>> GetCourseStatisticsAsync(CancellationToken ct)
+    public async Task<IReadOnlyList<CourseStatisticsRecord>> GetCourseStatisticsAsync(Guid? courseId, CancellationToken ct)
     {
         await using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(ct);
@@ -92,9 +92,11 @@ internal sealed class ReportRepository(string connectionString) : IReportReposit
             FROM Courses c
             LEFT JOIN EnrollmentAgg ea ON ea.CourseId = c.Id
             LEFT JOIN HarmonyAgg ha ON ha.CourseId = c.Id
+            WHERE @CourseId IS NULL OR c.Id = @CourseId
             ORDER BY EnrollmentCount DESC;
             """,
             connection);
+        command.Parameters.AddWithValue("@CourseId", courseId.HasValue ? courseId.Value : (object)DBNull.Value);
 
         var results = new List<CourseStatisticsRecord>();
         await using var reader = await command.ExecuteReaderAsync(ct);

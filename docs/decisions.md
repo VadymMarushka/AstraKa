@@ -172,3 +172,26 @@ the concurrent *write* to the same `Cohort` row conflicts.
 wait instead of fail, and could offer a nicer retry-without-409 experience - not used here, since
 the task calls for the loser to get a clear `409` ("the last seat has just been taken"), not a
 delayed success.
+
+## 13. Harmony trend: two independent `GroupBy` queries instead of one, merged in memory
+
+**Context**: `GetHarmonyTrendQueryHandler` needs, per calendar date of a cohort, the average
+harmony level, the report count, and the number of completed exercises - the last of which lives
+on a different table (`ExerciseCompletions`) than the one being grouped (`DailyReports`).
+**Decision**: this is two separate `db.DailyReports.GroupBy(...)`/`db.ExerciseCompletions.GroupBy(...)`
+queries - each aggregating only native columns of its own table - run independently, then merged
+by date key in a small in-memory dictionary lookup. See `docs/sql/linq-queries.sql` for both
+generated statements.
+**Why**: EF Core (the version this project pins) cannot translate aggregating a joined or computed
+value *after* a `GroupBy`. Three different single-query shapes were tried - grouping directly over
+`r.Completions.Count`, flattening into an anonymous projection first, and a `GroupJoin`/`LEFT JOIN`
+onto a pre-grouped completion-count subquery - and all three failed at the same point: once the
+`Select` after `GroupBy` needs to `Sum`/aggregate anything beyond a plain column of the grouped
+table, the translator gives up with `InvalidOperationException: ... could not be translated`. Two
+independent `GroupBy`s, each over only its own table's native columns, is the shape that actually
+works.
+**Trade-off**: two round trips to the database instead of one, and the final merge happens in C#
+rather than SQL. This is *not* the "no client-side grouping" CLAUDE.md warns against - each
+`GroupBy`/aggregate is still a single translated SQL statement; only combining two already-small,
+already-aggregated result sets by date happens outside the database. A cohort's report/completion
+history is bounded by its program length, so this costs nothing that matters at this scale.
