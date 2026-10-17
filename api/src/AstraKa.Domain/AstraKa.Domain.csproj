@@ -4,5 +4,11 @@
     Domain: entities, enums and business rules. The innermost layer, so it
     references nothing - neither other projects nor infrastructure packages.
   -->
+  <PropertyGroup>
+    <!-- Lets any XML doc comments here flow into the API's generated OpenAPI document (lab 3) -
+         CS1591 is suppressed since this project isn't meant to doc-comment every public member. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
 
 </Project>

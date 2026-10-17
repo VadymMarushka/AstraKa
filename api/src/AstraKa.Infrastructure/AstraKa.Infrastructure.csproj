@@ -5,6 +5,12 @@
     seeding, ADO.NET repositories, external HTTP clients. Implements the
     Application interfaces, so it depends on Application (and Domain through it).
   -->
+  <PropertyGroup>
+    <!-- Lets any XML doc comments here flow into the API's generated OpenAPI document (lab 3) -
+         CS1591 is suppressed since this project isn't meant to doc-comment every public member. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\AstraKa.Application\AstraKa.Application.csproj" />
   </ItemGroup>

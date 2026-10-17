@@ -5,6 +5,12 @@
     interfaces the outer layers implement (IAppDbContext, ICurrentUser,
     IHoroscopeProvider, ADO.NET repositories). Depends on Domain only.
   -->
+  <PropertyGroup>
+    <!-- Lets DTO/record XML doc comments flow into the API's generated OpenAPI document (lab 3) -
+         CS1591 is suppressed since this project isn't meant to doc-comment every public member. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\AstraKa.Domain\AstraKa.Domain.csproj" />
   </ItemGroup>

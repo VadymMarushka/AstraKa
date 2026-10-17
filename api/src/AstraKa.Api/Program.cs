@@ -8,6 +8,7 @@ using AstraKa.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,8 +18,32 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers()
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
-// OpenAPI document; Scalar is the UI on top of it below.
-builder.Services.AddOpenApi();
+// OpenAPI document; Scalar is the UI on top of it below. The Bearer security scheme lets a
+// pasted Auth0 access token be sent on every "Try it" request from Scalar - see the matching
+// MapScalarApiReference call below for the UI side of this.
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
+    {
+        document.Components ??= new OpenApiComponents();
+        document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+        document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            Description = $"Paste an Auth0 access token (Audience: {builder.Configuration["Authentication:Audience"]}).",
+        };
+
+        document.Security ??= [];
+        document.Security.Add(new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference("Bearer", document)] = [],
+        });
+
+        return Task.CompletedTask;
+    });
+});
 
 builder.Services.AddApplication(builder.Configuration["MediatR:LicenseKey"]);
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -54,7 +79,12 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    app.MapScalarApiReference();
+
+    // Bearer field in Scalar's UI - paste a real Auth0 access token here and it's sent as
+    // Authorization: Bearer <token> on every "Try it" request.
+    app.MapScalarApiReference(options => options
+        .AddPreferredSecuritySchemes(["Bearer"])
+        .AddHttpAuthentication("Bearer", auth => auth.Token = string.Empty));
 }
 
 app.UseExceptionHandler();

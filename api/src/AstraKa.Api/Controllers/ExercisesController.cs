@@ -17,9 +17,13 @@ namespace AstraKa.Api.Controllers;
 [ApiController]
 [Route("api/v1/exercises")]
 [Authorize]
+[Produces("application/json")]
+[ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+[ProducesResponseType<ProblemDetails>(StatusCodes.Status500InternalServerError)]
 public sealed class ExercisesController(ISender sender, IAuthorizationService authorizationService) : ControllerBase
 {
     /// <summary>Filterable, sortable, paginated catalog listing.</summary>
+    /// <response code="200">The matching page of exercises.</response>
     [HttpGet]
     [ProducesResponseType<PagedResult<ExerciseDto>>(StatusCodes.Status200OK)]
     public async Task<PagedResult<ExerciseDto>> List([FromQuery] GetExercisesQuery query, CancellationToken cancellationToken)
@@ -28,20 +32,26 @@ public sealed class ExercisesController(ISender sender, IAuthorizationService au
     }
 
     /// <summary>One exercise by id.</summary>
+    /// <response code="200">The exercise.</response>
+    /// <response code="404">No exercise with this id exists.</response>
     [HttpGet("{id:guid}")]
     [ProducesResponseType<ExerciseDto>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ExerciseDto> GetById(Guid id, CancellationToken cancellationToken)
     {
         return await sender.Send(new GetExerciseByIdQuery(id), cancellationToken);
     }
 
     /// <summary>Creates a new exercise authored by the signed-in Starshepherd.</summary>
+    /// <response code="201">The exercise was created.</response>
+    /// <response code="400">The request failed validation.</response>
+    /// <response code="403">The caller is not a Starshepherd.</response>
     [HttpPost]
+    [Consumes("application/json")]
     [Authorize(Policy = Policies.Starshepherd)]
     [ProducesResponseType(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Create([FromBody] CreateExerciseCommand command, CancellationToken cancellationToken)
     {
         var id = await sender.Send(command, cancellationToken);
@@ -49,12 +59,18 @@ public sealed class ExercisesController(ISender sender, IAuthorizationService au
     }
 
     /// <summary>Full update - the exercise's author or any Oracle.</summary>
+    /// <response code="204">The exercise was updated.</response>
+    /// <response code="400">The request failed validation.</response>
+    /// <response code="403">The caller is neither the exercise's author nor an Oracle.</response>
+    /// <response code="404">No exercise with this id exists.</response>
+    /// <response code="409">The update violates a database constraint.</response>
     [HttpPut("{id:guid}")]
+    [Consumes("application/json")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateExerciseRequest request, CancellationToken cancellationToken)
     {
         var exercise = await sender.Send(new GetExerciseByIdQuery(id), cancellationToken);
@@ -70,11 +86,15 @@ public sealed class ExercisesController(ISender sender, IAuthorizationService au
     }
 
     /// <summary>The exercise's author or any Oracle; 409 if it's used in any course program.</summary>
+    /// <response code="204">The exercise was deleted.</response>
+    /// <response code="403">The caller is neither the exercise's author nor an Oracle.</response>
+    /// <response code="404">No exercise with this id exists.</response>
+    /// <response code="409">The exercise is still used in a course program.</response>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var exercise = await sender.Send(new GetExerciseByIdQuery(id), cancellationToken);

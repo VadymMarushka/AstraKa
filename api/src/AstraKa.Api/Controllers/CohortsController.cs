@@ -17,12 +17,17 @@ namespace AstraKa.Api.Controllers;
 [ApiController]
 [Route("api/v1")]
 [Authorize]
+[Produces("application/json")]
+[ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+[ProducesResponseType<ProblemDetails>(StatusCodes.Status500InternalServerError)]
 public sealed class CohortsController(ISender sender, IAuthorizationService authorizationService) : ControllerBase
 {
     /// <summary>Filterable, sortable, paginated cohort listing. The course's visibility rule applies (a draft is a 404 for anyone but its author or Oracle).</summary>
+    /// <response code="200">The matching page of cohorts.</response>
+    /// <response code="404">No course with this id exists (or it's a draft hidden from the caller).</response>
     [HttpGet("courses/{courseId:guid}/cohorts")]
     [ProducesResponseType<PagedResult<CohortDto>>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<PagedResult<CohortDto>> List(Guid courseId, [FromQuery] GetCohortsRequest request, CancellationToken cancellationToken)
     {
         await sender.Send(new GetCourseByIdQuery(courseId), cancellationToken);
@@ -33,20 +38,27 @@ public sealed class CohortsController(ISender sender, IAuthorizationService auth
     }
 
     /// <summary>Cohort details.</summary>
+    /// <response code="200">The cohort.</response>
+    /// <response code="404">No cohort with this id exists.</response>
     [HttpGet("cohorts/{id:guid}")]
     [ProducesResponseType<CohortDto>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<CohortDto> GetById(Guid id, CancellationToken cancellationToken)
     {
         return await sender.Send(new GetCohortByIdQuery(id), cancellationToken);
     }
 
     /// <summary>Creates a new cohort under a course - the course's author or any Oracle.</summary>
+    /// <response code="201">The cohort was created.</response>
+    /// <response code="400">The request failed validation.</response>
+    /// <response code="403">The caller is neither the course's author nor an Oracle.</response>
+    /// <response code="404">No course with this id exists (or it's a draft hidden from the caller).</response>
     [HttpPost("courses/{courseId:guid}/cohorts")]
+    [Consumes("application/json")]
     [ProducesResponseType(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Create(Guid courseId, [FromBody] CreateCohortRequest request, CancellationToken cancellationToken)
     {
         var course = await sender.Send(new GetCourseByIdQuery(courseId), cancellationToken);
@@ -62,12 +74,18 @@ public sealed class CohortsController(ISender sender, IAuthorizationService auth
     }
 
     /// <summary>Full update - the course's author or any Oracle; 409 if the cohort has started, the new StartDate isn't in the future, or SeatLimit would drop below seats already taken.</summary>
+    /// <response code="204">The cohort was updated.</response>
+    /// <response code="400">The request failed validation.</response>
+    /// <response code="403">The caller is neither the course's author nor an Oracle.</response>
+    /// <response code="404">No cohort with this id exists.</response>
+    /// <response code="409">The cohort has started, the new StartDate isn't in the future, or SeatLimit would drop below seats already taken.</response>
     [HttpPut("cohorts/{id:guid}")]
+    [Consumes("application/json")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCohortRequest request, CancellationToken cancellationToken)
     {
         var cohort = await sender.Send(new GetCohortByIdQuery(id), cancellationToken);
@@ -83,11 +101,15 @@ public sealed class CohortsController(ISender sender, IAuthorizationService auth
     }
 
     /// <summary>The course's author or any Oracle; 409 if the cohort has any enrollments.</summary>
+    /// <response code="204">The cohort was deleted.</response>
+    /// <response code="403">The caller is neither the course's author nor an Oracle.</response>
+    /// <response code="404">No cohort with this id exists.</response>
+    /// <response code="409">The cohort has enrollments and cannot be deleted.</response>
     [HttpDelete("cohorts/{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var cohort = await sender.Send(new GetCohortByIdQuery(id), cancellationToken);

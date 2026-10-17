@@ -46,6 +46,29 @@ wires `Infrastructure`'s implementations to the interfaces `Application` declare
 | Global exception handling | `Api/ExceptionHandling/` |
 | Tests | `api/tests/AstraKa.Tests/Common/` (shared fixture), `.../Ado/`, `.../Auth/`, `.../Endpoints/`, `.../Concurrency/` |
 
+## DI registrations and lifetimes
+
+Scoped to services *we* explicitly registered with a lifetime choice - not generic framework setup
+calls like `AddControllers()`/`AddAuthentication()` that don't expose one. Covers every
+`services.Add...` call across `Api/Program.cs`, `Application/DependencyInjection.cs`, and
+`Infrastructure/DependencyInjection.cs` (lab 3 requires justifying these).
+
+| Service | Lifetime | Why |
+|---|---|---|
+| `AppDbContext` | Scoped | EF Core's own default; one unit of work per request, and `DbContext` isn't thread-safe to share. |
+| `IAppDbContext` | Scoped | Must match `AppDbContext`'s lifetime - a longer-lived wrapper around a Scoped dependency is a captive-dependency bug. |
+| ADO.NET connection string | Singleton | Immutable config value, safe to share forever. |
+| `ICourseDayRepository`/`IDayExerciseRepository`/`ICourseProgramRepository`/`IReportRepository` | Singleton | Each method opens and disposes its own `SqlConnection`; the repository itself holds no mutable state, so one shared instance is safe and avoids per-request allocation. |
+| MediatR (`ISender`, `IRequestHandler<,>` implementations) | Transient | MediatR's own default; a fresh handler per request correctly re-resolves its own Scoped dependencies (e.g. `IAppDbContext`) each time. |
+| `ValidationBehavior<,>` | Transient | MediatR pipeline-behavior default; stateless wrapper invoked once per request. |
+| FluentValidation validators | Scoped | `AddValidatorsFromAssembly`'s library default. |
+| `TimeProvider` | Singleton | Genuinely stateless/immutable abstraction over the clock. |
+| `AuthorOrOracleAuthorizationHandler` (`IAuthorizationHandler`) | Singleton | Stateless - every call only reads the `AuthorizationHandlerContext` passed into it. |
+| `IHttpContextAccessor` | Singleton | Framework default; backed by `AsyncLocal`, so it safely resolves the *current* request's context even from a Singleton. |
+| `DatabaseClaimsTransformation` (`IClaimsTransformation`) | Scoped | Needs `IAppDbContext` (Scoped) to look up the caller's `User` row once per request. |
+| `CurrentUser` (`ICurrentUser`) | Scoped | Conceptually one per request; reads `IHttpContextAccessor`'s current `HttpContext.User` each access. |
+| `GlobalExceptionHandler` (`IExceptionHandler`) | Singleton | `AddExceptionHandler<T>`'s framework default; stateless - every parameter comes from the call itself. |
+
 ## Walkthrough: `PUT /api/v1/exercises/{id}`
 
 1. **`ExercisesController.Update`** (`Api/Controllers/ExercisesController.cs`) receives the request.

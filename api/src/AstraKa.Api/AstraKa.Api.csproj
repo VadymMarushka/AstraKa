@@ -5,6 +5,12 @@
     The composition root - it is the only project allowed to see Infrastructure,
     and it wires Infrastructure's implementations to Application's interfaces.
   -->
+  <PropertyGroup>
+    <!-- Controller/DTO XML doc comments flow into the generated OpenAPI document (lab 3) once
+         this is set - CS1591 is suppressed since not every public member here is doc-commented. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.13" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
