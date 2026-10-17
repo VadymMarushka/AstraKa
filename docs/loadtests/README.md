@@ -2,39 +2,32 @@
 
 Measures the effect of the `HybridCache`-backed horoscope cache (see `docs/decisions.md` ADR #14)
 using [k6](https://k6.io/). Both runs use the **fake** horoscope provider
-(`Horoscope:Provider=Fake`, ~300ms artificial latency, no network call) - **never the real
-third-party API** (freehoroscopeapi.com). The only thing that changes between the two runs is
-`Horoscope:CacheEnabled`.
+(`Horoscope:Provider=Fake`, artificial latency, no network call) - **never the real third-party
+API** (freehoroscopeapi.com). The fake's latency is set to 400 ms, the latency of the real API
+measured with curl. The only thing that changes between the two runs is `Horoscope:CacheEnabled`.
 
 ## 1. Install k6 (Windows)
 
 ```powershell
-winget install k6.k6
+winget install k6 --source winget
 ```
-(or, with Chocolatey: `choco install k6`). Confirm with `k6 version`.
 
-## 2. Start the API with the fake provider
+Reopen the terminal, then confirm with `k6 version`.
 
-In a dedicated PowerShell window, from the repo root:
+## 2. Run "before" - caching off
+
+In a PowerShell window, from the repo root:
 
 ```powershell
 $env:Horoscope__Provider = "Fake"
-dotnet run --project api/src/AstraKa.Api
-```
-
-Leave this running for both measurements below. Note the URL it listens on (printed at startup,
-typically `http://localhost:5215`) - pass it to k6 via `--env BASE_URL=...` if it differs from the
-script's default.
-
-## 3. Run "before" - caching off
-
-In the **same** PowerShell window as step 2, stop the app (`Ctrl+C`), then:
-
-```powershell
-$env:Horoscope__Provider = "Fake"
+$env:Horoscope__FakeLatencyMs = "400"
 $env:Horoscope__CacheEnabled = "false"
 dotnet run --project api/src/AstraKa.Api
 ```
+
+`$env:` variables only apply to this window, so the API must be started from it. Before load
+testing, open `http://localhost:5215/api/v1/zodiac-signs/1/horoscope` once and check that the
+response is the fake's text ("The stars favor Aries today."), not a real horoscope.
 
 In a **second** PowerShell window:
 
@@ -42,48 +35,60 @@ In a **second** PowerShell window:
 k6 run api/loadtests/horoscope.js
 ```
 
-Record the results in the table below under "Before".
+If the API listens on another URL, pass it with `--env BASE_URL=...`.
 
-## 4. Run "after" - caching on
+## 3. Run "after" - caching on
 
-Stop the app again, then:
+Stop the API (`Ctrl+C`) and, in the **same** window (Provider and FakeLatencyMs are already set):
 
 ```powershell
-$env:Horoscope__Provider = "Fake"
-$env:Horoscope__CacheEnabled = "true"   # or just omit this line - true is the default
+$env:Horoscope__CacheEnabled = "true"
 dotnet run --project api/src/AstraKa.Api
 ```
 
-Run k6 again exactly the same way:
+Run k6 again exactly the same way.
 
-```powershell
-k6 run api/loadtests/horoscope.js
-```
+## Why the numbers change
 
-Record the results under "After".
+With caching off, every request calls the fake provider and waits its 400 ms - at 50 concurrent
+VUs, throughput is bounded by how many of those 400 ms calls can run at once.
+
+With caching on, only the *first* request for each of the 12 signs on a given UTC day is a cache
+miss and pays the 400 ms; `HybridCache.GetOrCreateAsync`'s stampede protection means several
+concurrent misses for the *same* sign trigger only one factory call. Every other request is served
+from the in-process cache: the lookup itself takes well under a millisecond, and what remains of
+the response time is the HTTP pipeline, JSON serialization and k6 competing for the same CPU.
 
 ## Results
 
-Fill in from each run's k6 summary output (`http_reqs` for RPS, `http_req_duration` for
-avg/p95, `http_req_failed` for the error rate):
+Measured on 2026-10-17. k6 and the API ran on the same Windows machine (shared CPU).
+50 VUs, 30 s, anonymous `GET /api/v1/zodiac-signs/{1..12}/horoscope`, fake provider with
+`FakeLatencyMs=400`.
 
-| Metric | Before (`CacheEnabled=false`) | After (`CacheEnabled=true`) |
-|---|---|---|
-| RPS (req/s) | | |
-| Avg latency | | |
-| p95 latency | | |
-| Error rate | | |
+| Metric | Before (`CacheEnabled=false`) | After (`CacheEnabled=true`) | Change |
+|---|---|---|---|
+| Throughput (req/s) | 118 | 5,971 | ×50 |
+| Requests in 30 s | 3,580 | 179,170 | ×50 |
+| Avg latency | 420.17 ms | 7.66 ms | ×55 faster |
+| Median latency | 414.11 ms | 4.85 ms | ×85 faster |
+| p95 latency | 430.42 ms | 14.42 ms | ×30 faster |
+| Max latency | 816.13 ms | 4.92 s (cold start, see below) | — |
+| Error rate | 0.00% | 0.00% | — |
 
-## Why the numbers should change
+Screenshots of the k6 summaries: [`before.png`](before.png), [`after.png`](after.png).
 
-With caching off, every single request calls the fake provider directly and pays its ~300ms
-artificial latency - at 50 concurrent VUs, overall throughput is bounded by how many of those
-300ms calls can run at once, and average/p95 latency sit close to 300ms (plus overhead).
+## Observations
 
-With caching on, only the *first* request for each of the 12 signs on a given UTC day is a cache
-miss and pays the 300ms; `HybridCache.GetOrCreateAsync`'s stampede protection means even several
-concurrent misses for the *same* sign only trigger one factory call, not one per request. Every
-other request - which, with only 12 signs and 50 VUs over 30s, is the overwhelming majority -
-returns from the in-process cache in well under a millisecond. Expect RPS to rise sharply and
-average/p95 latency to drop close to the no-op baseline once the cache has warmed (within the
-first second or two of the run).
+- **Before matches the theory.** With every request waiting ~0.42 s on the provider, 50 VUs can
+  do at most 50 / 0.42 ≈ 119 req/s - the measured 118 req/s. Throughput was bound entirely by
+  waiting on the external call, not by our code or the database.
+- **After, the bottleneck moves to the CPU.** A cache hit does no I/O at all (no provider call, no
+  DB query - the sign lookup lives inside the cache factory), so throughput is limited only by
+  Kestrel, serialization and k6 itself competing for the same CPU. Absolute numbers depend on the
+  machine; the relative difference is what this test demonstrates.
+- **The 4.92 s max in the "after" run is a cold-start outlier**, not a cache problem: the first
+  requests after startup pay for JIT compilation, the first database connection and filling the
+  cache for 12 signs. It affects a handful of the 179,170 requests and does not move p95 (14.42 ms).
+  A warm-up request per sign before the run would remove it from the summary.
+- **Zero errors in both runs** - the cache changes performance, not behaviour; responses are
+  identical apart from timing.
