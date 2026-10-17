@@ -1,7 +1,9 @@
 # Architecture
 
 Clean Architecture, four layers, dependencies point inward only. See `CLAUDE.md` → "Architecture
-rules" for the rules; this page is the map and one worked example.
+rules" for the rules; this page is the map and one worked example. See `docs/decisions.md` for the
+record of *why* specific decisions were made (repository/UoW, EF vs ADO.NET boundary, auth split,
+etc.).
 
 ## Layers
 

@@ -14,6 +14,7 @@ It is also meant for the author's portfolio, so code quality and a clean, runnab
 - Lore, naming, tone of voice, sample content: `docs/world-bible.md`
 - What each lab must demonstrate: `docs/lab-requirements.md`
 - Conceptual ER diagram: `docs/diagrams/conceptual-diagram.png`
+- Architecture decision records (why the code is shaped the way it is): `docs/decisions.md`
 
 ## Language
 
