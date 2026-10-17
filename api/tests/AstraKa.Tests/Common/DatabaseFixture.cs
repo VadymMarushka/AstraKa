@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AstraKa.Application.CourseProgram;
+using AstraKa.Application.Horoscopes;
 using AstraKa.Application.Reports;
 using AstraKa.Domain.Entities;
 using AstraKa.Infrastructure;
@@ -52,6 +53,11 @@ public sealed class DatabaseFixture : IAsyncLifetime
     /// any test that calls <c>SetUtcNow</c> must restore the original value in a finally block.</summary>
     public FixedTimeProvider Clock { get; private set; } = null!;
 
+    /// <summary>Swapped in for the real/fake <see cref="IHoroscopeProvider"/> - counts calls per
+    /// sign and can simulate a failure. Shared across the collection; each test should dedicate
+    /// its own, never-reused sign (see the type's own doc comment).</summary>
+    public CountingHoroscopeProvider Horoscope { get; private set; } = null!;
+
     public async Task InitializeAsync()
     {
         var configuration = new ConfigurationBuilder()
@@ -76,6 +82,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
         Reports = _provider.GetRequiredService<IReportRepository>();
 
         Clock = new FixedTimeProvider(DateTimeOffset.UtcNow);
+        Horoscope = new CountingHoroscopeProvider();
 
         _apiFactory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
@@ -83,7 +90,8 @@ public sealed class DatabaseFixture : IAsyncLifetime
                 new Dictionary<string, string?> { ["ConnectionStrings:Default"] = TestConnectionString }));
 
             // Swap Auth0 JWT validation for the test scheme, which reads X-Test-Sub/X-Test-Email
-            // headers instead of a real bearer token. Swap the clock too, so tests can control it.
+            // headers instead of a real bearer token. Swap the clock and the horoscope provider
+            // too, so tests can control them.
             builder.ConfigureTestServices(apiServices =>
             {
                 apiServices.AddAuthentication(TestAuthHandler.SchemeName)
@@ -91,6 +99,9 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
                 apiServices.RemoveAll<TimeProvider>();
                 apiServices.AddSingleton<TimeProvider>(Clock);
+
+                apiServices.RemoveAll<IHoroscopeProvider>();
+                apiServices.AddSingleton<IHoroscopeProvider>(Horoscope);
             });
         });
 

@@ -1,7 +1,9 @@
 using AstraKa.Application.Common;
 using AstraKa.Application.CourseProgram;
+using AstraKa.Application.Horoscopes;
 using AstraKa.Application.Reports;
 using AstraKa.Infrastructure.Ado;
+using AstraKa.Infrastructure.Horoscopes;
 using AstraKa.Infrastructure.Persistence;
 using AstraKa.Infrastructure.Persistence.Seeding;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +43,28 @@ public static class DependencyInjection
         services.AddSingleton<IDayExerciseRepository, DayExerciseRepository>();
         services.AddSingleton<ICourseProgramRepository, CourseProgramRepository>();
         services.AddSingleton<IReportRepository, ReportRepository>();
+
+        // Lazy bind: IOptions<T>.Value is read per-request (by the handlers), so the same
+        // ConfigureAppConfiguration-override timing concern as the connection string above doesn't
+        // apply here.
+        services.Configure<HoroscopeOptions>(configuration.GetSection("Horoscope"));
+
+        // Eager, startup-time branch - which IHoroscopeProvider to register has to be decided now,
+        // not lazily. Fine here: unlike the connection string, no WebApplicationFactory-based test
+        // ever needs this branch to see a later config override - tests swap IHoroscopeProvider
+        // directly via ConfigureTestServices instead.
+        if (configuration["Horoscope:Provider"] == "Fake")
+        {
+            services.AddSingleton<IHoroscopeProvider, FakeHoroscopeProvider>();
+        }
+        else
+        {
+            services.AddHttpClient<IHoroscopeProvider, HoroscopeProvider>(client =>
+            {
+                client.BaseAddress = new Uri("https://freehoroscopeapi.com/");
+                client.Timeout = TimeSpan.FromSeconds(3); // short - the fallback kicks in well before a user notices
+            });
+        }
 
         return services;
     }

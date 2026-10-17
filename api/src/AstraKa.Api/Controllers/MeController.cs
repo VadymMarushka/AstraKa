@@ -1,3 +1,5 @@
+using AstraKa.Api.Auth;
+using AstraKa.Application.Horoscopes;
 using AstraKa.Application.Me;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -56,5 +58,17 @@ public sealed class MeController(ISender sender) : ControllerBase
     {
         await sender.Send(command, cancellationToken);
         return CreatedAtAction(nameof(Get), null);
+    }
+
+    /// <summary>Today's horoscope for the signed-in Wanderer's own sign.</summary>
+    /// <response code="200">Today's horoscope.</response>
+    /// <response code="403">The caller is not an onboarded Wanderer.</response>
+    [HttpGet("horoscope")]
+    [Authorize(Policy = Policies.Wanderer)]
+    [ProducesResponseType<HoroscopeDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    public async Task<HoroscopeDto> GetMyHoroscope(CancellationToken cancellationToken)
+    {
+        return await sender.Send(new GetMyHoroscopeQuery(), cancellationToken);
     }
 }

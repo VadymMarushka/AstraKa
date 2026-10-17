@@ -43,7 +43,8 @@ projects; it talks to the API over HTTP and has its own client-side models.
   (lab 3 lists Mapperly/Mapster/manual — not AutoMapper)
 - Auth: external **OAuth 2.0 / OpenID Connect** provider (likely Auth0, not decided yet);
   the API only validates JWTs, no passwords are stored
-- Horoscopes: freehoroscopeapi.com behind `IHoroscopeProvider` (fallback: API Ninjas)
+- Horoscopes: freehoroscopeapi.com behind `IHoroscopeProvider`; on any failure, a lore-text
+  fallback ("The stars are silent today.") - no API key, no second live provider
 - Web: **Angular 22**, standalone components, signals, **Spartan UI** (shadcn-style, Tailwind v4) + SCSS
 - Desktop: **Avalonia** (pending lecturer approval; WPF fallback), MVVM with CommunityToolkit.Mvvm,
   **AutoMapper** (required by lab 5)

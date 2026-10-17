@@ -195,3 +195,26 @@ rather than SQL. This is *not* the "no client-side grouping" CLAUDE.md warns aga
 `GroupBy`/aggregate is still a single translated SQL statement; only combining two already-small,
 already-aggregated result sets by date happens outside the database. A cohort's report/completion
 history is bounded by its program length, so this costs nothing that matters at this scale.
+
+## 14. HybridCache over `IMemoryCache` for the horoscope cache
+
+**Context**: `GetHoroscopeQueryHandler`/`GetMyHoroscopeQueryHandler` cache a per-(sign, UTC date)
+value backed by a slow, external HTTP call - and the whole point of the lab's before/after load
+test is many concurrent requests hitting the same cache key around the same time.
+**Decision**: `HybridCache.GetOrCreateAsync` (`Microsoft.Extensions.Caching.Hybrid`), not
+`IMemoryCache.GetOrCreate`, injected directly into the handlers (same precedent as injecting
+`TimeProvider` directly rather than wrapping it in a custom abstraction - ADR #10).
+**Why**: `IMemoryCache.GetOrCreate` has no stampede protection - two concurrent requests that both
+miss the same key both run the factory, meaning two duplicate calls to the slow provider at
+exactly the moment a k6-style load test makes this most visible. `HybridCache.GetOrCreateAsync`
+coalesces concurrent misses for the same key into one factory call; every other caller just awaits
+that one in-flight result. It's also forward-compatible with an L2 distributed cache (e.g. Redis)
+without any calling-code change, though none is configured here - a single-instance app only gets
+HybridCache's in-process L1 layer, which is all this feature needs.
+**Trade-off**: a new NuGet dependency (pre-approved for this task) and one real limitation worked
+around deliberately: `HybridCacheEntryOptions` (the TTL) are fixed at the `GetOrCreateAsync` call
+site, decided *before* the factory runs - there's no way to pick a shorter TTL *after* learning the
+factory's result was the lore fallback, within one call. Solved with a deliberate follow-up
+`cache.SetAsync(key, value, shortTtlOptions)` whenever the cached value equals the known fallback
+sentinel, overwriting that entry's expiry so a transient provider outage self-heals in ~30s instead
+of poisoning the cache until UTC midnight.

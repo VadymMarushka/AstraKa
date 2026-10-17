@@ -1,6 +1,7 @@
 using AstraKa.Application.Common;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace AstraKa.Application;
 
@@ -33,6 +34,10 @@ public static class DependencyInjection
         // Handlers that need "today" (e.g. Cohort's scheduling rules) take this instead of calling
         // DateTime.UtcNow directly, so a test can swap in a controllable clock.
         services.AddSingleton(TimeProvider.System);
+
+        // Horoscope caching - coalesces concurrent cache misses for the same (sign, date) into one
+        // factory call, unlike IMemoryCache. See docs/decisions.md ADR #14.
+        services.AddHybridCache();
 
         return services;
     }
