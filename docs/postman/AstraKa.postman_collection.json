@@ -1,0 +1,1025 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-4000-8000-000000000001",
+    "name": "AstraKa API",
+    "description": "End-to-end story through every AstraKa API endpoint, in Collection Runner order: anonymous zodiac/horoscope lookups, onboarding, Exercises CRUD, a Course built day by day, publishing, a Cohort (Constellation), a Wanderer's enrollment, reports (own course + a seeded one as Oracle), then cleanup. Re-runnable: names that must be unique use {{$timestamp}}. See docs/postman/README.md for how to get the three bearer tokens and how to grant the Oracle role. Cleanup never touches seeded reference data (zodiac signs, seeded Starshepherds/courses) - only entities this run created itself; a couple of deletes are deliberately left to fail with 409 because the API's own business rules block them (an enrolled Cohort, a Course with a Cohort) - that is the point being demonstrated, not a bug in the collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "oauth2",
+    "oauth2": [
+      { "key": "grant_type", "value": "authorization_code_with_pkce", "type": "string" },
+      { "key": "authUrl", "value": "https://dev-0z4ka4a0dm7xu6hr.us.auth0.com/authorize", "type": "string" },
+      { "key": "accessTokenUrl", "value": "https://dev-0z4ka4a0dm7xu6hr.us.auth0.com/oauth/token", "type": "string" },
+      { "key": "clientId", "value": "vXDn0A2yfk7l9U5bgR8H3hWKk5GaYzS2", "type": "string" },
+      { "key": "clientSecret", "value": "", "type": "string" },
+      { "key": "client_authentication", "value": "body", "type": "string" },
+      { "key": "scope", "value": "openid profile email", "type": "string" },
+      { "key": "redirect_uri", "value": "https://oauth.pstmn.io/v1/callback", "type": "string" },
+      { "key": "callBackUrl", "value": "https://oauth.pstmn.io/v1/callback", "type": "string" },
+      { "key": "state", "value": "", "type": "string" },
+      { "key": "tokenName", "value": "AstraKa token", "type": "string" },
+      { "key": "challengeAlgorithm", "value": "S256", "type": "string" },
+      { "key": "addTokenTo", "value": "header", "type": "string" },
+      { "key": "client_authentication", "value": "body", "type": "string" },
+      { "key": "useBrowser", "value": true, "type": "boolean" },
+      { "key": "authRequestParams", "value": [
+          { "key": "audience", "value": "https://api.astraka.local", "enabled": true },
+          { "key": "prompt", "value": "login", "enabled": true }
+        ], "type": "any" }
+    ],
+    "description": "This OAuth2 config exists only so the collection's own Authorization tab can show 'Get New Access Token'. No request in this collection inherits it - every folder/request sets its own Bearer auth explicitly against wandererToken/starshepherdToken/oracleToken. Click 'Get New Access Token' once per account (prompt=login forces Auth0's login screen every time, so you can log in as a different one of your three test accounts each click), then copy the resulting access token into the matching variable's CURRENT value - see docs/postman/README.md. If the audience/prompt extra params don't survive import on your Postman version, add them manually under the Authorization tab's advanced/additional parameters."
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5215", "type": "string" },
+    { "key": "wandererToken", "value": "", "type": "secret" },
+    { "key": "starshepherdToken", "value": "", "type": "secret" },
+    { "key": "oracleToken", "value": "", "type": "secret" },
+    { "key": "wandererZodiacSignId", "value": "", "type": "string" },
+    { "key": "exerciseId", "value": "", "type": "string" },
+    { "key": "systemExerciseId", "value": "", "type": "string" },
+    { "key": "systemExerciseName", "value": "", "type": "string" },
+    { "key": "systemExerciseDescription", "value": "", "type": "string" },
+    { "key": "systemExerciseInstructions", "value": "", "type": "string" },
+    { "key": "systemExerciseUnit", "value": "", "type": "string" },
+    { "key": "courseId", "value": "", "type": "string" },
+    { "key": "withProgramCourseId", "value": "", "type": "string" },
+    { "key": "dayId", "value": "", "type": "string" },
+    { "key": "dayExerciseId", "value": "", "type": "string" },
+    { "key": "cohortId", "value": "", "type": "string" },
+    { "key": "cohortStartDate", "value": "", "type": "string" },
+    { "key": "pastStartDate", "value": "", "type": "string" },
+    { "key": "seededCourseId", "value": "", "type": "string" },
+    { "key": "seededCohortId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "1. Zodiac signs & horoscope (anonymous)",
+      "description": "No authentication required - public reference data and the daily horoscope.",
+      "auth": { "type": "noauth" },
+      "item": [
+        {
+          "name": "List zodiac signs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/zodiac-signs",
+            "description": "All 12 seeded signs."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"All 12 signs are returned\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData).to.be.an('array').with.lengthOf(12);",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Get horoscope for a sign",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/zodiac-signs/1/horoscope",
+            "description": "Aries (id 1). Cached server-side for the rest of the UTC day."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Horoscope text is present\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.signName).to.eql(\"Aries\");",
+              "    pm.expect(jsonData.horoscope).to.be.a('string').with.length.above(0);",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Get horoscope for unknown sign -> 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/zodiac-signs/999/horoscope"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 404\", function () { pm.response.to.have.status(404); });",
+              "pm.test(\"ProblemDetails status matches\", function () { pm.expect(pm.response.json().status).to.eql(404); });"
+            ] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "2. Me",
+      "description": "Onboarding and the current caller's own profile/horoscope, one request per role.",
+      "item": [
+        {
+          "name": "Onboard as Wanderer",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{wandererToken}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Wanderer\",\n  \"zodiacSignId\": 1\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/me/wanderer",
+            "description": "201 the first time this Auth0 account runs the collection, 409 ('already onboarded') on every later run - both are expected."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 201 or 409 (already onboarded)\", function () {",
+              "    pm.expect([201, 409]).to.include(pm.response.code);",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Onboard as Starshepherd",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{starshepherdToken}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Starshepherd\",\n  \"title\": \"Wandering Keeper\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/me/starshepherd",
+            "description": "201 the first time, 409 ('already onboarded') on later runs."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 201 or 409 (already onboarded)\", function () {",
+              "    pm.expect([201, 409]).to.include(pm.response.code);",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Get me as Wanderer",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{wandererToken}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/me"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Role is Wanderer\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.role).to.eql(\"Wanderer\");",
+              "    pm.collectionVariables.set(\"wandererZodiacSignId\", jsonData.zodiacSignId);",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Get me as Starshepherd",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{starshepherdToken}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/me"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Role is Starshepherd\", function () { pm.expect(pm.response.json().role).to.eql(\"Starshepherd\"); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Get me as Oracle",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{oracleToken}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/me",
+            "description": "Requires that docs/sql/grant-oracle.sql has already been run for this account - Oracle is never created through the API."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Role is Oracle\", function () { pm.expect(pm.response.json().role).to.eql(\"Oracle\"); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Get my horoscope as Wanderer",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{wandererToken}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/me/horoscope"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Horoscope text is present\", function () { pm.expect(pm.response.json().horoscope).to.be.a('string').with.length.above(0); });"
+            ] }
+          }]
+        },
+        {
+          "name": "My horoscope as Starshepherd -> 403",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{starshepherdToken}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/me/horoscope",
+            "description": "The endpoint is Wanderer-only - a Starshepherd account is forbidden."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 403\", function () { pm.response.to.have.status(403); });"
+            ] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "3. Exercises",
+      "description": "Starshepherd CRUD over the exercise catalog, list filters/pagination, and the Oracle's authorship-bypass on a system (seeded, author-less) exercise.",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{starshepherdToken}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "Create exercise",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Exercise {{$timestamp}}\",\n  \"description\": \"A stretch created by the Postman collection.\",\n  \"instructions\": \"Reach for the nearest star, slowly.\",\n  \"unit\": \"Reps\",\n  \"videoUrl\": null\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/exercises"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+              "pm.test(\"Location header has an id\", function () {",
+              "    const location = pm.response.headers.get(\"Location\");",
+              "    pm.expect(location).to.be.a('string');",
+              "    pm.collectionVariables.set(\"exerciseId\", location.split('/').pop());",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Get exercise by id",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/exercises/{{exerciseId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Name matches\", function () { pm.expect(pm.response.json().name).to.include(\"Postman Exercise\"); });"
+            ] }
+          }]
+        },
+        {
+          "name": "List exercises with filters and pagination",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/exercises?nameSearch=Postman&page=1&pageSize=10" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Page metadata and our exercise are present\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.page).to.eql(1);",
+              "    pm.expect(jsonData.pageSize).to.eql(10);",
+              "    const ids = jsonData.items.map(i => i.id);",
+              "    pm.expect(ids).to.include(pm.collectionVariables.get(\"exerciseId\"));",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Update exercise",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Exercise {{$timestamp}}\",\n  \"description\": \"An updated stretch created by the Postman collection.\",\n  \"instructions\": \"Reach for the nearest star, slowly, then release.\",\n  \"unit\": \"Reps\",\n  \"videoUrl\": null\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/exercises/{{exerciseId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 204\", function () { pm.response.to.have.status(204); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Create exercise as Wanderer -> 403",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{wandererToken}}", "type": "string" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Wanderer Exercise {{$timestamp}}\",\n  \"description\": \"Should never be created.\",\n  \"instructions\": \"N/A\",\n  \"unit\": \"Reps\",\n  \"videoUrl\": null\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/exercises"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 403\", function () { pm.response.to.have.status(403); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Get exercise by missing id -> 404",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/exercises/00000000-0000-0000-0000-000000000000" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 404\", function () { pm.response.to.have.status(404); });",
+              "pm.test(\"ProblemDetails status matches\", function () { pm.expect(pm.response.json().status).to.eql(404); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Find a system exercise (for the Oracle edit demo)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/exercises?systemOnly=true&pageSize=1" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"At least one seeded system exercise exists\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.items).to.be.an('array').with.length.above(0);",
+              "    const item = jsonData.items[0];",
+              "    pm.collectionVariables.set(\"systemExerciseId\", item.id);",
+              "    pm.collectionVariables.set(\"systemExerciseName\", item.name);",
+              "    pm.collectionVariables.set(\"systemExerciseDescription\", item.description);",
+              "    pm.collectionVariables.set(\"systemExerciseInstructions\", item.instructions);",
+              "    pm.collectionVariables.set(\"systemExerciseUnit\", item.unit);",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Oracle edits a system exercise -> 204",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{oracleToken}}", "type": "string" }] },
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"{{systemExerciseName}}\",\n  \"description\": \"{{systemExerciseDescription}}\",\n  \"instructions\": \"{{systemExerciseInstructions}}\",\n  \"unit\": \"{{systemExerciseUnit}}\",\n  \"videoUrl\": null\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/exercises/{{systemExerciseId}}",
+            "description": "AuthorOrOracle authorization lets an Oracle edit ANY exercise, including a system one it did not author. Writes back the exact same field values it just read, so the seed content is left unchanged for other runs."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 204\", function () { pm.response.to.have.status(204); });"
+            ] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "4. Courses",
+      "description": "Create 'the course' that the rest of the story (program, publish, cohort, enrollment, reports) runs against.",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{starshepherdToken}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "Create course (no sign restriction)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Course {{$timestamp}}\",\n  \"description\": \"A course created end-to-end by the Postman collection.\",\n  \"promise\": \"You will complete the collection run.\",\n  \"price\": 19.99,\n  \"zodiacSignIds\": []\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/courses"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+              "pm.test(\"Location header has an id\", function () {",
+              "    const location = pm.response.headers.get(\"Location\");",
+              "    pm.collectionVariables.set(\"courseId\", location.split('/').pop());",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Get course by id",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/courses/{{courseId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Status is Draft\", function () { pm.expect(pm.response.json().status).to.eql(\"Draft\"); });"
+            ] }
+          }]
+        },
+        {
+          "name": "List courses with filters",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/courses?nameSearch=Postman&minPrice=10&maxPrice=30&pageSize=50&mine=true",
+            "description": "The course is still a Draft at this point - mine=true is what lets its own author (Starshepherd) see it; everyone else only sees Published courses."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Our draft course is in the list\", function () {",
+              "    const ids = pm.response.json().items.map(i => i.id);",
+              "    pm.expect(ids).to.include(pm.collectionVariables.get(\"courseId\"));",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "List courses with filters as Wanderer -> draft not shown",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{wandererToken}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/courses?nameSearch=Postman&minPrice=10&maxPrice=30&pageSize=50&mine=true",
+            "description": "mine=true is scoped to the caller's own authored courses - a Wanderer has none, and in any case this Draft belongs to the Starshepherd, not to them, so it never appears."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Our draft course is NOT in the list\", function () {",
+              "    const ids = pm.response.json().items.map(i => i.id);",
+              "    pm.expect(ids).to.not.include(pm.collectionVariables.get(\"courseId\"));",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Update course",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Course {{$timestamp}}\",\n  \"description\": \"An updated course created by the Postman collection.\",\n  \"promise\": \"You will complete the collection run.\",\n  \"price\": 24.99,\n  \"zodiacSignIds\": []\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/courses/{{courseId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 204\", function () { pm.response.to.have.status(204); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Publish course without days -> 409",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/courses/{{courseId}}/publish",
+            "description": "A course needs at least one day before it can be published."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 409\", function () { pm.response.to.have.status(409); });",
+              "pm.test(\"ProblemDetails status matches\", function () { pm.expect(pm.response.json().status).to.eql(409); });"
+            ] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "5. Course program",
+      "description": "Days and day-exercises on 'the course' (ADO.NET), plus the dedicated one-shot 'create course with program' transaction, including its rollback on a bad exercise id.",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{starshepherdToken}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "Add day 1 to course",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"dayNumber\": 1,\n  \"title\": \"Day One\",\n  \"description\": \"The first day of the journey.\",\n  \"meetLink\": null\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/courses/{{courseId}}/days"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+              "pm.test(\"Location header has an id\", function () {",
+              "    const location = pm.response.headers.get(\"Location\");",
+              "    pm.collectionVariables.set(\"dayId\", location.split('/').pop());",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Add duplicate day number -> 409",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"dayNumber\": 1,\n  \"title\": \"Another Day One\",\n  \"description\": null,\n  \"meetLink\": null\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/courses/{{courseId}}/days"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 409\", function () { pm.response.to.have.status(409); });",
+              "pm.test(\"ProblemDetails status matches\", function () { pm.expect(pm.response.json().status).to.eql(409); });"
+            ] }
+          }]
+        },
+        {
+          "name": "List course days",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/courses/{{courseId}}/days" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Exactly one day exists\", function () { pm.expect(pm.response.json()).to.be.an('array').with.lengthOf(1); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Add exercise to day",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"exerciseId\": \"{{exerciseId}}\",\n  \"orderNumber\": 1,\n  \"sets\": 2,\n  \"amount\": 10\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/days/{{dayId}}/exercises"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+              "pm.test(\"Location header has an id\", function () {",
+              "    const location = pm.response.headers.get(\"Location\");",
+              "    pm.collectionVariables.set(\"dayExerciseId\", location.split('/').pop());",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Add exercise with Sets 0 -> 400",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"exerciseId\": \"{{exerciseId}}\",\n  \"orderNumber\": 2,\n  \"sets\": 0,\n  \"amount\": 10\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/days/{{dayId}}/exercises"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 400\", function () { pm.response.to.have.status(400); });",
+              "pm.test(\"ProblemDetails status matches\", function () { pm.expect(pm.response.json().status).to.eql(400); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Update day exercise",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"orderNumber\": 1,\n  \"sets\": 3,\n  \"amount\": 12\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/day-exercises/{{dayExerciseId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 204\", function () { pm.response.to.have.status(204); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Create course with program (commit)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman With-Program {{$timestamp}}\",\n  \"description\": \"A course created in one transaction.\",\n  \"promise\": \"Everything commits together, or nothing does.\",\n  \"price\": 9.99,\n  \"zodiacSignIds\": [],\n  \"days\": [\n    {\n      \"dayNumber\": 1,\n      \"title\": \"Day One\",\n      \"description\": null,\n      \"meetLink\": null,\n      \"exercises\": [\n        { \"exerciseId\": \"{{exerciseId}}\", \"orderNumber\": 1, \"sets\": 2, \"amount\": 10 }\n      ]\n    }\n  ]\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/courses/with-program",
+            "description": "The ADO.NET transaction: Course + CourseDays + DayExercises committed together."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+              "pm.test(\"Location header has an id\", function () {",
+              "    const location = pm.response.headers.get(\"Location\");",
+              "    pm.collectionVariables.set(\"withProgramCourseId\", location.split('/').pop());",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Create course with program - bad exercise id -> 409 rolled back",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman With-Program Rollback {{$timestamp}}\",\n  \"description\": \"This commit should fail entirely.\",\n  \"promise\": \"Nothing here should ever be persisted.\",\n  \"price\": 9.99,\n  \"zodiacSignIds\": [],\n  \"days\": [\n    {\n      \"dayNumber\": 1,\n      \"title\": \"Day One\",\n      \"description\": null,\n      \"meetLink\": null,\n      \"exercises\": [\n        { \"exerciseId\": \"00000000-0000-0000-0000-000000000000\", \"orderNumber\": 1, \"sets\": 2, \"amount\": 10 }\n      ]\n    }\n  ]\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/courses/with-program",
+            "description": "A non-existent exercise id makes the whole transaction fail - the Course row itself must not be left behind either."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 409\", function () { pm.response.to.have.status(409); });",
+              "pm.test(\"ProblemDetails status matches\", function () { pm.expect(pm.response.json().status).to.eql(409); });"
+            ] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "6. Publish the course",
+      "description": "Now that it has a day, publishing succeeds.",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{starshepherdToken}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "Publish course -> 204",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/courses/{{courseId}}/publish" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 204\", function () { pm.response.to.have.status(204); });"
+            ] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "7. Cohorts (Constellation)",
+      "description": "A Cohort run of the published course. Only one real Starshepherd identity (starshepherdToken) is configured in this collection, so the 'another Starshepherd cannot edit/delete this Cohort' 403 scenario is skipped here - it is already demonstrated elsewhere in this collection by the wrong-role 403 cases (e.g. Create exercise as Wanderer, My horoscope as Starshepherd, Enroll as Starshepherd). Add a second Starshepherd token variable and a parallel request if you want to exercise that specific case too.",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{starshepherdToken}}", "type": "string" }] },
+      "event": [{
+        "listen": "prerequest",
+        "script": { "type": "text/javascript", "exec": [
+          "const future = new Date();",
+          "future.setUTCDate(future.getUTCDate() + 7);",
+          "pm.collectionVariables.set(\"cohortStartDate\", future.toISOString().split('T')[0]);",
+          "",
+          "const past = new Date();",
+          "past.setUTCDate(past.getUTCDate() - 1);",
+          "pm.collectionVariables.set(\"pastStartDate\", past.toISOString().split('T')[0]);"
+        ] }
+      }],
+      "item": [
+        {
+          "name": "Create cohort (start date = today + 7)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"startDate\": \"{{cohortStartDate}}\",\n  \"seatLimit\": 5\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/courses/{{courseId}}/cohorts"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+              "pm.test(\"Location header has an id\", function () {",
+              "    const location = pm.response.headers.get(\"Location\");",
+              "    pm.collectionVariables.set(\"cohortId\", location.split('/').pop());",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Create cohort with past start date -> 409",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"startDate\": \"{{pastStartDate}}\",\n  \"seatLimit\": 5\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/courses/{{courseId}}/cohorts"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 409\", function () { pm.response.to.have.status(409); });",
+              "pm.test(\"ProblemDetails status matches\", function () { pm.expect(pm.response.json().status).to.eql(409); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Get cohort by id",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/cohorts/{{cohortId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Seat limit matches\", function () { pm.expect(pm.response.json().seatLimit).to.eql(5); });"
+            ] }
+          }]
+        },
+        {
+          "name": "List cohorts for course",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/courses/{{courseId}}/cohorts?upcomingOnly=true&pageSize=50" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Our cohort is in the list\", function () {",
+              "    const ids = pm.response.json().items.map(i => i.id);",
+              "    pm.expect(ids).to.include(pm.collectionVariables.get(\"cohortId\"));",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Update cohort",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"startDate\": \"{{cohortStartDate}}\",\n  \"seatLimit\": 8\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/v1/cohorts/{{cohortId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 204\", function () { pm.response.to.have.status(204); });"
+            ] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "8. Enrollments",
+      "description": "A Wanderer enrolls, is blocked from enrolling twice, can leave, and a Starshepherd is forbidden from enrolling at all.",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{wandererToken}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "Enroll in cohort",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/cohorts/{{cohortId}}/enrollments" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });"
+            ] }
+          }]
+        },
+        {
+          "name": "List my enrollments",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/me/enrollments?pageSize=50" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Our cohort is in the list\", function () {",
+              "    const ids = pm.response.json().items.map(i => i.cohortId);",
+              "    pm.expect(ids).to.include(pm.collectionVariables.get(\"cohortId\"));",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Get my enrollment by cohort id",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/me/enrollments/{{cohortId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Status is Active\", function () { pm.expect(pm.response.json().status).to.eql(\"Active\"); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Enroll again -> 409 (double enroll)",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/cohorts/{{cohortId}}/enrollments" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 409\", function () { pm.response.to.have.status(409); });",
+              "pm.test(\"ProblemDetails status matches\", function () { pm.expect(pm.response.json().status).to.eql(409); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Leave enrollment",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/api/v1/me/enrollments/{{cohortId}}/leave" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 204\", function () { pm.response.to.have.status(204); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Get my enrollment by cohort id (now Left)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/me/enrollments/{{cohortId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Status is Left\", function () { pm.expect(pm.response.json().status).to.eql(\"Left\"); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Enroll as Starshepherd -> 403",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{starshepherdToken}}", "type": "string" }] },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/cohorts/{{cohortId}}/enrollments"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 403\", function () { pm.response.to.have.status(403); });"
+            ] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "9. Reports",
+      "description": "A Starshepherd's reports over their own course/cohort, plus the Oracle's authorship-bypass over a seeded course's reports. The enrollment row from folder 8 (Active, then Left) is enough to make the Starshepherd's own participants/statistics non-empty - it stays an enrollment row either way.",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{starshepherdToken}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "Participants of own cohort",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/cohorts/{{cohortId}}/participants" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"At least one participant\", function () { pm.expect(pm.response.json()).to.be.an('array').with.length.above(0); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Statistics of own course",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/courses/{{courseId}}/statistics" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Enrollment count is at least 1\", function () { pm.expect(pm.response.json().enrollmentCount).to.be.at.least(1); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Harmony trend of own cohort",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/cohorts/{{cohortId}}/harmony-trend" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Response is an array\", function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Find a seeded course (for the Oracle report demo)",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/courses?nameSearch=HOMEWARD&pageSize=5" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"The seeded HOMEWARD course exists\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.items).to.be.an('array').with.length.above(0);",
+              "    pm.collectionVariables.set(\"seededCourseId\", jsonData.items[0].id);",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Find a cohort of that seeded course",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/v1/courses/{{seededCourseId}}/cohorts?pageSize=50" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"At least one seeded cohort exists\", function () {",
+              "    const jsonData = pm.response.json();",
+              "    pm.expect(jsonData.items).to.be.an('array').with.length.above(0);",
+              "    pm.collectionVariables.set(\"seededCohortId\", jsonData.items[0].id);",
+              "});"
+            ] }
+          }]
+        },
+        {
+          "name": "Oracle: participants of a seeded cohort",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{oracleToken}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/cohorts/{{seededCohortId}}/participants",
+            "description": "AuthorOrOracleAuthorizationHandler succeeds unconditionally for the Oracle role, so an Oracle can read reports for ANY course/cohort, including seeded ones it did not author."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Response is an array\", function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Oracle: statistics of a seeded course",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{oracleToken}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/courses/{{seededCourseId}}/statistics"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"Course name matches\", function () { pm.expect(pm.response.json().courseName).to.include(\"HOMEWARD\"); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Wanderer on a report -> 403",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{wandererToken}}", "type": "string" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/cohorts/{{cohortId}}/participants"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 403\", function () { pm.response.to.have.status(403); });"
+            ] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "10. Cleanup",
+      "description": "Deletes everything this run created that the API's business rules allow. The enrolled cohort and its course are deliberately left behind - deleting them is blocked by design (409), which is itself part of what this folder demonstrates. Seeded reference data (zodiac signs, seeded Starshepherds/courses) is never touched by this collection at all.",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{starshepherdToken}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "Delete cohort with an enrollment -> 409",
+          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/api/v1/cohorts/{{cohortId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 409\", function () { pm.response.to.have.status(409); });",
+              "pm.test(\"ProblemDetails status matches\", function () { pm.expect(pm.response.json().status).to.eql(409); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Delete course with a cohort -> 409",
+          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/api/v1/courses/{{courseId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 409\", function () { pm.response.to.have.status(409); });",
+              "pm.test(\"ProblemDetails status matches\", function () { pm.expect(pm.response.json().status).to.eql(409); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Delete the with-program course",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/courses/{{withProgramCourseId}}",
+            "description": "This course never had a cohort, so it deletes cleanly - also removes its own day/day-exercise by cascade, freeing the shared exercise for the next step."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 204\", function () { pm.response.to.have.status(204); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Delete day exercise",
+          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/api/v1/day-exercises/{{dayExerciseId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 204\", function () { pm.response.to.have.status(204); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Delete day",
+          "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/api/v1/days/{{dayId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 204\", function () { pm.response.to.have.status(204); });"
+            ] }
+          }]
+        },
+        {
+          "name": "Delete exercise",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/exercises/{{exerciseId}}",
+            "description": "Now unreferenced by any day-exercise (both courses that used it are gone), so this succeeds."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test(\"Status code is 204\", function () { pm.response.to.have.status(204); });"
+            ] }
+          }]
+        }
+      ]
+    }
+  ]
+}
