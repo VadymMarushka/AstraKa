@@ -1,4 +1,5 @@
 using AstraKa.Application.Common;
+using AstraKa.Domain.Entities;
 using AstraKa.Domain.Enums;
 using FluentValidation;
 using MediatR;
@@ -45,13 +46,29 @@ public sealed class GetCoursesQueryHandler(IAppDbContext db, ICurrentUser curren
 {
     public async Task<PagedResult<CourseListItemDto>> Handle(GetCoursesQuery request, CancellationToken cancellationToken)
     {
-        var query = db.Courses.AsNoTracking().AsQueryable();
+        var filtered = BuildFilteredQuery(db.Courses.AsNoTracking(), request, currentUser.UserId, currentUser.Role == UserRole.Oracle);
+
+        var totalCount = await filtered.CountAsync(cancellationToken);
+
+        var items = await BuildPagedQuery(filtered, request).ToListAsync(cancellationToken);
+
+        return new PagedResult<CourseListItemDto>(items, request.Page, request.PageSize, totalCount);
+    }
+
+    /// <summary>
+    /// Filters + sorts, shared by the paged items query and the count query above - extracted so
+    /// <c>QueryTranslationTests</c> can capture this handler's real SQL shape via
+    /// <c>IQueryable.ToQueryString()</c> instead of re-implementing a simplified stand-in.
+    /// </summary>
+    internal static IQueryable<Course> BuildFilteredQuery(IQueryable<Course> courses, GetCoursesQuery request, Guid? currentUserId, bool currentUserIsOracle)
+    {
+        var query = courses;
 
         if (request.Mine)
         {
-            query = query.Where(c => c.AuthorId == currentUser.UserId);
+            query = query.Where(c => c.AuthorId == currentUserId);
         }
-        else if (currentUser.Role != UserRole.Oracle)
+        else if (!currentUserIsOracle)
         {
             query = query.Where(c => c.Status == CourseStatus.Published);
         }
@@ -76,17 +93,18 @@ public sealed class GetCoursesQueryHandler(IAppDbContext db, ICurrentUser curren
             query = query.Where(c => c.Price <= maxPrice);
         }
 
-        query = request.SortBy switch
+        return request.SortBy switch
         {
             CourseSortBy.Price => request.Descending
                 ? query.OrderByDescending(c => c.Price).ThenBy(c => c.Name)
                 : query.OrderBy(c => c.Price).ThenBy(c => c.Name),
             _ => request.Descending ? query.OrderByDescending(c => c.Name) : query.OrderBy(c => c.Name),
         };
+    }
 
-        var totalCount = await query.CountAsync(cancellationToken);
-
-        var items = await query
+    /// <summary>The paged, projected items query - built on top of <see cref="BuildFilteredQuery"/>.</summary>
+    internal static IQueryable<CourseListItemDto> BuildPagedQuery(IQueryable<Course> filtered, GetCoursesQuery request) =>
+        filtered
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(c => new CourseListItemDto(
@@ -96,9 +114,5 @@ public sealed class GetCoursesQueryHandler(IAppDbContext db, ICurrentUser curren
                 c.CourseSigns.Select(cs => cs.ZodiacSign.Name).ToList(),
                 c.CourseDays.Count,
                 c.Status,
-                c.Price))
-            .ToListAsync(cancellationToken);
-
-        return new PagedResult<CourseListItemDto>(items, request.Page, request.PageSize, totalCount);
-    }
+                c.Price));
 }

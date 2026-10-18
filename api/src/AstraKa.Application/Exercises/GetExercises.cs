@@ -1,4 +1,5 @@
 using AstraKa.Application.Common;
+using AstraKa.Domain.Entities;
 using AstraKa.Domain.Enums;
 using FluentValidation;
 using MediatR;
@@ -41,7 +42,23 @@ public sealed class GetExercisesQueryHandler(IAppDbContext db) : IRequestHandler
 {
     public async Task<PagedResult<ExerciseDto>> Handle(GetExercisesQuery request, CancellationToken cancellationToken)
     {
-        var query = db.Exercises.AsNoTracking().AsQueryable();
+        var filtered = BuildFilteredQuery(db.Exercises.AsNoTracking(), request);
+
+        var totalCount = await filtered.CountAsync(cancellationToken);
+
+        var items = await BuildPagedQuery(filtered, request).ToListAsync(cancellationToken);
+
+        return new PagedResult<ExerciseDto>(items, request.Page, request.PageSize, totalCount);
+    }
+
+    /// <summary>
+    /// Filters + sorts, shared by the paged items query and the count query above - extracted so
+    /// <c>QueryTranslationTests</c> can capture this handler's real SQL shape via
+    /// <c>IQueryable.ToQueryString()</c> instead of re-implementing a simplified stand-in.
+    /// </summary>
+    internal static IQueryable<Exercise> BuildFilteredQuery(IQueryable<Exercise> exercises, GetExercisesQuery request)
+    {
+        var query = exercises;
 
         if (request.Unit is { } unit)
         {
@@ -63,22 +80,19 @@ public sealed class GetExercisesQueryHandler(IAppDbContext db) : IRequestHandler
             query = query.Where(e => e.AuthorId == authorId);
         }
 
-        query = request.SortBy switch
+        return request.SortBy switch
         {
             ExerciseSortBy.Unit => request.Descending
                 ? query.OrderByDescending(e => e.Unit).ThenBy(e => e.Name)
                 : query.OrderBy(e => e.Unit).ThenBy(e => e.Name),
             _ => request.Descending ? query.OrderByDescending(e => e.Name) : query.OrderBy(e => e.Name),
         };
+    }
 
-        var totalCount = await query.CountAsync(cancellationToken);
-
-        var items = await query
+    /// <summary>The paged, projected items query - built on top of <see cref="BuildFilteredQuery"/>.</summary>
+    internal static IQueryable<ExerciseDto> BuildPagedQuery(IQueryable<Exercise> filtered, GetExercisesQuery request) =>
+        filtered
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(e => new ExerciseDto(e.Id, e.AuthorId, e.Name, e.Description, e.Instructions, e.Unit, e.VideoUrl, e.AuthorId == null))
-            .ToListAsync(cancellationToken);
-
-        return new PagedResult<ExerciseDto>(items, request.Page, request.PageSize, totalCount);
-    }
+            .Select(e => new ExerciseDto(e.Id, e.AuthorId, e.Name, e.Description, e.Instructions, e.Unit, e.VideoUrl, e.AuthorId == null));
 }

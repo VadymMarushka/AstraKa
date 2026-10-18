@@ -1,4 +1,5 @@
 using AstraKa.Application.Common;
+using AstraKa.Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,18 +25,9 @@ public sealed class GetHarmonyTrendQueryHandler(IAppDbContext db) : IRequestHand
         // entirely server-side; only combining two already-small, already-aggregated result sets
         // happens in C#, which is not the client-side grouping CLAUDE.md's "no client-side
         // grouping" rules out.
-        var reportStats = await db.DailyReports
-            .AsNoTracking()
-            .Where(r => r.CohortId == request.CohortId)
-            .GroupBy(r => r.Date)
-            .Select(g => new { Date = g.Key, Average = g.Average(r => (double)r.HarmonyLevel), Count = g.Count() })
-            .ToListAsync(cancellationToken);
+        var reportStats = await BuildReportStatsQuery(db.DailyReports.AsNoTracking(), request.CohortId).ToListAsync(cancellationToken);
 
-        var completionCountsByDate = await db.ExerciseCompletions
-            .AsNoTracking()
-            .Where(c => c.DailyReport.CohortId == request.CohortId)
-            .GroupBy(c => c.DailyReport.Date)
-            .Select(g => new { Date = g.Key, Count = g.Count() })
+        var completionCountsByDate = await BuildCompletionCountsQuery(db.ExerciseCompletions.AsNoTracking(), request.CohortId)
             .ToDictionaryAsync(x => x.Date, x => x.Count, cancellationToken);
 
         return reportStats
@@ -43,4 +35,26 @@ public sealed class GetHarmonyTrendQueryHandler(IAppDbContext db) : IRequestHand
             .OrderBy(p => p.Date)
             .ToList();
     }
+
+    /// <summary>
+    /// The report-stats half of the trend (average harmony level + report count per date), scoped
+    /// to one cohort - extracted so <c>QueryTranslationTests</c> can capture this handler's real SQL
+    /// shape via <c>IQueryable.ToQueryString()</c> instead of re-implementing a simplified stand-in.
+    /// </summary>
+    internal static IQueryable<ReportStatsRow> BuildReportStatsQuery(IQueryable<DailyReport> dailyReports, Guid cohortId) =>
+        dailyReports
+            .Where(r => r.CohortId == cohortId)
+            .GroupBy(r => r.Date)
+            .Select(g => new ReportStatsRow(g.Key, g.Average(r => (double)r.HarmonyLevel), g.Count()));
+
+    /// <summary>The completed-exercise-count half of the trend, scoped to the same cohort.</summary>
+    internal static IQueryable<CompletionCountRow> BuildCompletionCountsQuery(IQueryable<ExerciseCompletion> completions, Guid cohortId) =>
+        completions
+            .Where(c => c.DailyReport.CohortId == cohortId)
+            .GroupBy(c => c.DailyReport.Date)
+            .Select(g => new CompletionCountRow(g.Key, g.Count()));
+
+    internal sealed record ReportStatsRow(DateOnly Date, double Average, int Count);
+
+    internal sealed record CompletionCountRow(DateOnly Date, int Count);
 }

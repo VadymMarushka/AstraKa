@@ -22,4 +22,12 @@
     <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="10.11.0" />
   </ItemGroup>
 
+  <!-- Lets QueryTranslationTests call handlers' internal static query-building methods directly,
+       so it captures their real LINQ shape instead of a re-implemented stand-in. -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>AstraKa.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
 </Project>
